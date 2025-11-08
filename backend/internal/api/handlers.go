@@ -10,7 +10,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
-	"path"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -191,14 +191,26 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 					Style:          decodeRFC2047Maybe(m["style"]),
 					ABV:            m["abv"],
 				}
-				// avoid accidental double slashes
-				url := cfg.PublicURL
-				if strings.HasSuffix(url, "/") {
-					url = strings.TrimSuffix(url, "/")
+				var imageURL string
+				if cfg.PublicURL == "" {
+					imageURL = *obj.Key
+				} else {
+					// avoid accidental double slashes
+					publicURL := cfg.PublicURL
+					if strings.HasSuffix(publicURL, "/") {
+						publicURL = strings.TrimSuffix(publicURL, "/")
+					}
+					var err error
+					imageURL, err = url.JoinPath(publicURL, *obj.Key)
+					if err != nil {
+						log.Printf("url.JoinPath error for %q, %q: %v", publicURL, *obj.Key, err)
+						results <- item{ok: false}
+						continue
+					}
 				}
 				results <- item{
 					img: Image{
-						URL:      path.Join(url, *obj.Key),
+						URL:      imageURL,
 						Key:      *obj.Key,
 						Metadata: md,
 					},
