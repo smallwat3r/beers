@@ -1,5 +1,3 @@
-
-.DEFAULT_GOAL := help
 .PHONY: help install build run dev clean
 
 help: ## Show this help message
