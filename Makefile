@@ -8,11 +8,12 @@ help: ## Show this help message
 install: ## Install frontend dependencies
 	cd frontend && npm install
 
-build: ## Build the frontend for production
+build: ## Build the frontend and backend
 	cd frontend && npm run build
+	cd backend && go build -o ../server ./cmd/server
 
 run: build ## Run the backend server (serves the built frontend)
-	cd backend && go run cmd/server/main.go
+	./server
 
 dev: ## Start the frontend and backend development servers
 	@echo "Starting frontend and backend dev servers..."
@@ -20,10 +21,16 @@ dev: ## Start the frontend and backend development servers
 	cd backend && go run cmd/server/main.go
 
 clean: ## Remove frontend and backend build artifacts
-	rm -rf frontend/dist frontend/node_modules
+	rm -rf frontend/dist frontend/node_modules server
 
 fmt: ## Format backend Go code
 	cd backend && go fmt ./...
 
 vet: ## Vet backend Go code for common errors
 	cd backend && go vet ./...
+
+docker-build: ## Build the Docker image
+	docker build -t beers-app .
+
+docker-run: ## Run the application in a Docker container
+	docker run -p 8080:8080 beers-app
