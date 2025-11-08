@@ -12,33 +12,41 @@ import (
 	"path/filepath"
 )
 
+const addr = ":8080"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Error loading configuration: %v", err)
+		log.Fatalf("error loading configuration: %v", err)
 	}
 
-	ctx := context.Background()
-
-	s3Client, err := s3client.New(ctx, cfg)
+	s3Client, err := s3client.New(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("Error creating S3 client: %v", err)
+		log.Fatalf("error creating S3 client: %v", err)
 	}
+
+	mux := http.NewServeMux()
 
 	limiter := rate.NewLimiter(1, 3)
+	mux.Handle("/api/images", rateLimiter(limiter, api.GetImages(s3Client, cfg)))
+	mux.Handle("/", staticHandler())
 
-	http.Handle("/api/images", rateLimiter(limiter, api.GetImages(s3Client, cfg)))
+	log.Printf("server starting on %s...", addr)
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
+}
 
+func staticHandler() http.Handler {
 	ex, err := os.Executable()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("error getting executable path: %v", err)
 	}
-	exPath := filepath.Dir(ex)
-	fs := http.FileServer(http.Dir(filepath.Join(exPath, "dist")))
-	http.Handle("/", fs)
 
-	log.Println("Server starting on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	exPath := filepath.Dir(ex)
+	distPath := filepath.Join(exPath, "dist")
+
+	return http.FileServer(http.Dir(distPath))
 }
 
 func rateLimiter(limiter *rate.Limiter, next http.Handler) http.Handler {
