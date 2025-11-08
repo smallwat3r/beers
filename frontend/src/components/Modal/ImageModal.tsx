@@ -19,6 +19,7 @@ export const ImageModal = ({ image, onClose }: ImageModalProps) => {
   return (
     <div class="modal-overlay" onClick={onClose}>
       <div class="modal-content" onClick={(e) => e.stopPropagation()}>
+        <button class="close-button" onClick={onClose}>&times;</button>
         <img src={image.url} alt={image.key} />
         <div class="image-metadata">
           <div class="metadata-body">

@@ -10,6 +10,8 @@ install: ## Install frontend dependencies
 
 build: ## Build the frontend and backend
 	cd frontend && npm run build
+	rm -rf dist
+	cp -r frontend/dist .
 	cd backend && go build -o ../server ./cmd/server
 
 run: build ## Run the backend server (serves the built frontend)
@@ -21,7 +23,7 @@ dev: ## Start the frontend and backend development servers
 	cd backend && go run cmd/server/main.go
 
 clean: ## Remove frontend and backend build artifacts
-	rm -rf frontend/dist frontend/node_modules server
+	rm -rf frontend/dist frontend/node_modules server dist
 
 fmt: ## Format backend Go code
 	cd backend && go fmt ./...
@@ -34,3 +36,9 @@ docker-build: ## Build the Docker image
 
 docker-run: ## Run the application in a Docker container
 	docker run -p 8080:8080 beers-app
+
+docker-compose-up: ## Start the application with Docker Compose
+	docker-compose up -d
+
+docker-compose-down: ## Stop the application with Docker Compose
+	docker-compose down

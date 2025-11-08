@@ -6,6 +6,8 @@ import (
 	"beers/backend/internal/s3client"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"golang.org/x/time/rate"
 )
 
@@ -24,7 +26,12 @@ func main() {
 
 	http.Handle("/api/images", rateLimiter(limiter, api.GetImages(s3Client, cfg)))
 
-	fs := http.FileServer(http.Dir("../frontend/dist"))
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	exPath := filepath.Dir(ex)
+	fs := http.FileServer(http.Dir(filepath.Join(exPath, "dist")))
 	http.Handle("/", fs)
 
 	log.Println("Server starting on port 8080...")
