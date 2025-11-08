@@ -31,6 +31,9 @@ fmt: ## Format backend Go code
 vet: ## Vet backend Go code for common errors
 	cd backend && go vet ./...
 
+test: ## Run backend Go tests
+	cd backend && go test ./...
+
 docker-build: ## Build the Docker image
 	docker build -t beers-app .
 

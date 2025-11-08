@@ -4,11 +4,11 @@ import (
 	"beers/backend/internal/api"
 	"beers/backend/internal/config"
 	"beers/backend/internal/s3client"
+	"golang.org/x/time/rate"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"golang.org/x/time/rate"
 )
 
 func main() {
