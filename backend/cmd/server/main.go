@@ -20,7 +20,7 @@ func main() {
 		log.Fatalf("Error creating S3 client: %v", err)
 	}
 
-	limiter := rate.NewLimiter(1, 3) // 1 request per second with a burst of 3
+	limiter := rate.NewLimiter(1, 3)
 
 	http.Handle("/api/images", rateLimiter(limiter, api.GetImages(s3Client, cfg)))
 
