@@ -1,10 +1,42 @@
 .star-rating {
-  display: inline-block;
+  display: inline-flex;
   font-size: 20px;
   color: var(--color-star-rating);
   margin-right: 8px;
+  line-height: 1;
+}
+
+.star {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
 }
 
 .star.empty {
   color: var(--color-star-empty);
+}
+
+.star.full {
+  color: var(--color-star-rating);
+}
+
+/* partial stars (handles any fraction: 0.25, 0.5, 0.75, etc.) */
+.star.partial {
+  color: var(--color-star-empty);
+  position: relative;
+}
+
+.star.partial::before {
+  content: '★';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--star-fill, 50%);
+  height: 100%;
+  color: var(--color-star-rating);
+  overflow: hidden;
+  display: inline-block;
+  text-align: left;
+  pointer-events: none;
+  line-height: 1;
 }
