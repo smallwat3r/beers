@@ -15,15 +15,20 @@ export const useImages = () => {
     setError(null);
 
     try {
-      const url = lastKey ? `/api/images?lastKey=${encodeURIComponent(lastKey)}` : '/api/images';
+      const url = lastKey
+        ? `/api/images?lastKey=${encodeURIComponent(lastKey)}`
+        : '/api/images';
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const data = await response.json();
 
-      setImages(prevImages => [...prevImages, ...data.images]);
+      setImages(prev => [...prev, ...data.images]);
       setHasMore(data.has_more);
+
       if (data.images.length > 0) {
         setLastKey(data.images[data.images.length - 1].key);
       }
@@ -36,48 +41,33 @@ export const useImages = () => {
     }
   }, [isLoading, hasMore, lastKey]);
 
+  // initial load
+  useEffect(() => loadImages(), []);
+
+  // infinite scroll
   useEffect(() => {
-    loadImages();
-  }, []); // Initial load
+    const handleScroll = () => {
+      const nearBottom =
+        window.innerHeight + document.documentElement.scrollTop >=
+        document.documentElement.offsetHeight - 500;
 
-    useEffect(() => {
+      if (!nearBottom || isLoading) return;
+      loadImages();
+    };
 
-      const handleScroll = () => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLoading, loadImages]);
 
-        if (window.innerHeight + document.documentElement.scrollTop < document.documentElement.offsetHeight - 500 || isLoading) {
+  // ensure full-page content fills viewport
+  useEffect(() => {
+    const isPageShort =
+      document.documentElement.scrollHeight <= window.innerHeight;
 
-          return;
+    if (!isLoading && hasMore && isPageShort) {
+      loadImages();
+    }
+  }, [images, isLoading, hasMore, loadImages]);
 
-        }
-
-        loadImages();
-
-      };
-
-  
-
-      window.addEventListener('scroll', handleScroll);
-
-      return () => window.removeEventListener('scroll', handleScroll);
-
-    }, [isLoading, loadImages]);
-
-  
-
-    useEffect(() => {
-
-      if (!isLoading && hasMore && document.documentElement.scrollHeight <= window.innerHeight) {
-
-        loadImages();
-
-      }
-
-    }, [images, isLoading, hasMore, loadImages]);
-
-  
-
-    return { images, isLoading, hasMore, error, loadImages };
-
-  };
-
-  
+  return { images, isLoading, hasMore, error, loadImages };
+};
