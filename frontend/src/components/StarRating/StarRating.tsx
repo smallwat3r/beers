@@ -24,6 +24,7 @@ export const StarRating = ({ rating, maxStars = 5 }: StarRatingProps) => {
       {[...Array(emptyStars)].map((_, i) => (
         <span key={`empty-${i}`} class="star empty">★</span>
       ))}
+      {rating >= 4 && <span class="heart">❤</span>}
     </div>
   );
 };
