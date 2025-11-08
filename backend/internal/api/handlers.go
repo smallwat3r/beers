@@ -160,11 +160,9 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 		// collect keys to process
 		keys := make([]types.Object, 0, len(out.Contents))
 		for _, obj := range out.Contents {
-			if obj.Key == nil {
+			// ensure to only include images in webp format
+			if obj.Key == nil || !strings.Contains(*obj.Key, "/WEBP/") {
 				continue
-			}
-			if *obj.Key == "latest.jpg" {
-				continue // skip sentinel
 			}
 			keys = append(keys, obj)
 		}
