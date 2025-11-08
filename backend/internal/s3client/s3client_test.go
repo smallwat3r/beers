@@ -13,7 +13,7 @@ type MockS3Client struct {
 		params *s3.ListObjectsV2Input,
 		optFns ...func(*s3.Options),
 	) (*s3.ListObjectsV2Output, error)
-	HeadObjectFunc    func(
+	HeadObjectFunc func(
 		ctx context.Context,
 		params *s3.HeadObjectInput,
 		optFns ...func(*s3.Options),

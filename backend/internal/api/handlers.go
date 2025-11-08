@@ -31,7 +31,7 @@ type CheckinMetadata struct {
 	City           string `json:"city"`
 	State          string `json:"state"`
 	Country        string `json:"country"`
-	LatLng         string `json:"lat_lng"`
+	LatLng         string `json:"latlng"`
 	Date           string `json:"date"`
 	Style          string `json:"style"`
 	ABV            string `json:"abv"`
@@ -95,6 +95,28 @@ func findFirstNonEmptyMonth(
 	return nil, time.Time{}, nil
 }
 
+func newCheckinMetadata(m map[string]string) CheckinMetadata {
+	if m == nil {
+		m = map[string]string{}
+	}
+	return CheckinMetadata{
+		ID:             m["id"],
+		Beer:           decodeRFC2047Maybe(m["beer"]),
+		Brewery:        decodeRFC2047Maybe(m["brewery"]),
+		BreweryCountry: decodeRFC2047Maybe(m["brewery_country"]),
+		Comment:        decodeRFC2047Maybe(m["comment"]),
+		Rating:         m["rating"],
+		Venue:          decodeRFC2047Maybe(m["venue"]),
+		City:           decodeRFC2047Maybe(m["city"]),
+		State:          decodeRFC2047Maybe(m["state"]),
+		Country:        decodeRFC2047Maybe(m["country"]),
+		LatLng:         m["latlng"],
+		Date:           m["date"],
+		Style:          decodeRFC2047Maybe(m["style"]),
+		ABV:            m["abv"],
+	}
+}
+
 func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -114,13 +136,13 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			startFrom = t.AddDate(0, -1, 0)
 		}
 
-		// find most recent month with content (up to 12 months back)
+		// find most recent month with content
 		out, monthFound, err := findFirstNonEmptyMonth(
 			ctx,
 			client,
 			cfg.BucketName,
 			startFrom,
-			12,
+			12, // check up to 12 months back
 		)
 		if err != nil {
 			log.Printf("find month error: %v", err)
@@ -159,59 +181,40 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 
 		worker := func() {
 			defer wg.Done()
+
 			for obj := range jobs {
+				key := *obj.Key
+
 				meta, err := s3client.GetObjectMetadata(
 					ctx,
 					client,
 					cfg.BucketName,
-					*obj.Key,
+					key,
 				)
 				if err != nil {
-					log.Printf("metadata %s: %v", *obj.Key, err)
+					log.Printf("error getting metadata %s: %v", key, err)
 					results <- item{ok: false}
 					continue
 				}
+
 				m := meta.Metadata
 				if m == nil {
 					m = map[string]string{}
 				}
-				md := CheckinMetadata{
-					ID:             m["id"],
-					Beer:           decodeRFC2047Maybe(m["beer"]),
-					Brewery:        decodeRFC2047Maybe(m["brewery"]),
-					BreweryCountry: decodeRFC2047Maybe(m["brewery_country"]),
-					Comment:        decodeRFC2047Maybe(m["comment"]),
-					Rating:         m["rating"],
-					Venue:          decodeRFC2047Maybe(m["venue"]),
-					City:           decodeRFC2047Maybe(m["city"]),
-					State:          decodeRFC2047Maybe(m["state"]),
-					Country:        decodeRFC2047Maybe(m["country"]),
-					LatLng:         m["lat_lng"],
-					Date:           m["date"],
-					Style:          decodeRFC2047Maybe(m["style"]),
-					ABV:            m["abv"],
+
+				md := newCheckinMetadata(meta.Metadata)
+
+				imageURL, err := url.JoinPath(cfg.PublicURL, key)
+				if err != nil {
+					log.Printf("failed to join URL %q and %q: %v", cfg.PublicURL, key, err)
+					results <- item{ok: false}
+					continue
 				}
-				var imageURL string
-				if cfg.PublicURL == "" {
-					imageURL = *obj.Key
-				} else {
-					// avoid accidental double slashes
-					publicURL := cfg.PublicURL
-					if strings.HasSuffix(publicURL, "/") {
-						publicURL = strings.TrimSuffix(publicURL, "/")
-					}
-					var err error
-					imageURL, err = url.JoinPath(publicURL, *obj.Key)
-					if err != nil {
-						log.Printf("url.JoinPath error for %q, %q: %v", publicURL, *obj.Key, err)
-						results <- item{ok: false}
-						continue
-					}
-				}
+
 				results <- item{
 					img: Image{
 						URL:      imageURL,
-						Key:      *obj.Key,
+						Key:      key,
 						Metadata: md,
 					},
 					ok: true,
@@ -251,7 +254,7 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			return ti.After(tj)
 		})
 
-		// probe one earlier month than the one we used.
+		// probe one earlier month than the one we used
 		prevMonth := monthFound.AddDate(0, -1, 0)
 		out2, _, err := findFirstNonEmptyMonth(ctx, client, cfg.BucketName, prevMonth, 1)
 		hasMore := err == nil && out2 != nil && len(out2.Contents) > 0
