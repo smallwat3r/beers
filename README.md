@@ -11,3 +11,6 @@ R2_ACCESS_KEY_ID="your_r2_access_key_id"
 R2_SECRET_ACCESS_KEY="your_r2_secret_access_key"
 R2_PUBLIC_URL="your_r2_public_url"
 ```
+
+Preview:
+![beers.png](./img/beers.png)
