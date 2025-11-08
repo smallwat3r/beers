@@ -4,6 +4,7 @@ import (
 	"beers/backend/internal/api"
 	"beers/backend/internal/config"
 	"beers/backend/internal/s3client"
+	"context"
 	"golang.org/x/time/rate"
 	"log"
 	"net/http"
@@ -17,7 +18,9 @@ func main() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	s3Client, err := s3client.New(cfg)
+	ctx := context.Background()
+
+	s3Client, err := s3client.New(ctx, cfg)
 	if err != nil {
 		log.Fatalf("Error creating S3 client: %v", err)
 	}

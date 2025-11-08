@@ -3,6 +3,7 @@ package s3client
 import (
 	"beers/backend/internal/config"
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -23,25 +24,22 @@ type S3Client interface {
 	) (*s3.HeadObjectOutput, error)
 }
 
-func New(cfg *config.AppConfig) (*s3.Client, error) {
+func New(ctx context.Context, cfg *config.AppConfig) (*s3.Client, error) {
 	r2Resolver := aws.EndpointResolverWithOptionsFunc(
-		func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
-				URL:               "https://" + cfg.AccountID + ".r2.cloudflarestorage.com",
+				URL:               fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.AccountID),
 				HostnameImmutable: true,
 				Source:            aws.EndpointSourceCustom,
 			}, nil
 		},
 	)
 
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(),
+	awsCfg, err := awsconfig.LoadDefaultConfig(
+		ctx,
 		awsconfig.WithEndpointResolverWithOptions(r2Resolver),
 		awsconfig.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(
-				cfg.AccessKeyID,
-				cfg.SecretAccessKey,
-				"",
-			),
+			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
 		),
 		awsconfig.WithRegion("auto"),
 	)

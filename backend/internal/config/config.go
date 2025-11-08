@@ -15,11 +15,11 @@ type AppConfig struct {
 
 func Load() (*AppConfig, error) {
 	envs := map[string]*string{
-		"BUCKET_NAME":           nil,
-		"R2_ACCOUNT_ID":         nil,
-		"R2_ACCESS_KEY_ID":      nil,
-		"R2_SECRET_ACCESS_KEY":  nil,
-		"R2_PUBLIC_URL":         nil,
+		"BUCKET_NAME":          nil,
+		"R2_ACCOUNT_ID":        nil,
+		"R2_ACCESS_KEY_ID":     nil,
+		"R2_SECRET_ACCESS_KEY": nil,
+		"R2_PUBLIC_URL":        nil,
 	}
 
 	// populate map and check missing
@@ -39,4 +39,3 @@ func Load() (*AppConfig, error) {
 		PublicURL:       *envs["R2_PUBLIC_URL"],
 	}, nil
 }
-
