@@ -57,8 +57,8 @@ func TestGetImages(t *testing.T) {
 		) (*s3.ListObjectsV2Output, error) {
 			return &s3.ListObjectsV2Output{
 				Contents: []types.Object{
-					{Key: aws.String("2025/11/image1.jpg")},
-					{Key: aws.String("2025/11/image2.jpg")},
+					{Key: aws.String("2025/11/08/WEBP/image1.webp")},
+					{Key: aws.String("2025/11/08/WEBP/image2.webp")},
 				},
 			}, nil
 		},
@@ -98,7 +98,7 @@ func TestGetImages(t *testing.T) {
 	}
 
 	img := resp.Images[0]
-	if img.URL != "https://test.com/2025/11/image1.jpg" {
+	if img.URL != "https://test.com/2025/11/08/WEBP/image1.webp" {
 		t.Errorf("unexpected image URL: %s", img.URL)
 	}
 	if img.Metadata.ID != "123" {
