@@ -49,47 +49,43 @@ func TestGetImages(t *testing.T) {
 		PublicURL:  "https://test.com",
 	}
 
-	mockClient := &MockS3Client{}
+	mockClient := &MockS3Client{
+		ListObjectsV2Func: func(
+			ctx context.Context,
+			params *s3.ListObjectsV2Input,
+			optFns ...func(*s3.Options),
+		) (*s3.ListObjectsV2Output, error) {
+			return &s3.ListObjectsV2Output{
+				Contents: []types.Object{
+					{Key: aws.String("2025/11/image1.jpg")},
+					{Key: aws.String("2025/11/image2.jpg")},
+				},
+			}, nil
+		},
+		HeadObjectFunc: func(
+			ctx context.Context,
+			params *s3.HeadObjectInput,
+			optFns ...func(*s3.Options),
+		) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
+				Metadata: map[string]string{
+					"id":   "123",
+					"beer": "Test Beer",
+					"date": "2025-11-08 12:00:00",
+				},
+			}, nil
+		},
+	}
 
 	handler := GetImages(mockClient, cfg)
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
-
-	mockClient.ListObjectsV2Func = func(
-		ctx context.Context,
-		params *s3.ListObjectsV2Input,
-		optFns ...func(*s3.Options),
-	) (*s3.ListObjectsV2Output, error) {
-		// return a mock response
-		return &s3.ListObjectsV2Output{
-			Contents: []types.Object{
-				{Key: aws.String("2025/11/image1.jpg")},
-				{Key: aws.String("2025/11/image2.jpg")},
-			},
-		}, nil
-	}
-
-	mockClient.HeadObjectFunc = func(
-		ctx context.Context,
-		params *s3.HeadObjectInput,
-		optFns ...func(*s3.Options),
-	) (*s3.HeadObjectOutput, error) {
-		// return mock metadata
-		return &s3.HeadObjectOutput{
-			Metadata: map[string]string{
-				"id":   "123",
-				"beer": "Test Beer",
-				"date": "2025-11-08 12:00:00",
-			},
-		}, nil
-	}
 
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+		t.Fatalf("status = %v, want %v", status, http.StatusOK)
 	}
 
 	var resp ImageResponse
@@ -97,12 +93,19 @@ func TestGetImages(t *testing.T) {
 		t.Fatalf("could not decode response: %v", err)
 	}
 
-	if len(resp.Images) != 2 {
-		t.Errorf("expected 2 images, got %d", len(resp.Images))
+	if got := len(resp.Images); got != 2 {
+		t.Fatalf("expected 2 images, got %d", got)
 	}
 
-	if resp.Images[0].URL != "https://test.com/2025/11/image1.jpg" {
-		t.Errorf("unexpected image URL: %s", resp.Images[0].URL)
+	img := resp.Images[0]
+	if img.URL != "https://test.com/2025/11/image1.jpg" {
+		t.Errorf("unexpected image URL: %s", img.URL)
+	}
+	if img.Metadata.ID != "123" {
+		t.Errorf("expected ID 123, got %q", img.Metadata.ID)
+	}
+	if img.Metadata.Beer != "Test Beer" {
+		t.Errorf("expected Beer %q, got %q", "Test Beer", img.Metadata.Beer)
 	}
 }
 
@@ -171,8 +174,7 @@ func TestParseMonthFromLastKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseMonthFromLastKey(tt.lastKey)
 			if (err != nil) != tt.expectErr {
-				t.Errorf("parseMonthFromLastKey() error = %v, expectErr %v", err, tt.expectErr)
-				return
+				t.Fatalf("parseMonthFromLastKey() error = %v, expectErr %v", err, tt.expectErr)
 			}
 			if !tt.expectErr && !got.Equal(tt.expected) {
 				t.Errorf("parseMonthFromLastKey() = %v, want %v", got, tt.expected)
