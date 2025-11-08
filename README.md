@@ -1,6 +1,6 @@
 # Beers
 
-My personal beer vault.
+This repository hosts a personal beer journal application. It serves Untappd checkins photos automatically stored in a bucket hosted on Cloudflare R2 thanks to [untappd-recorder](https://github.com/smallwat3r/untappd-recorder), providing a lightweight frontend interface.
 
 The API requires the following environment variables:
 ```
