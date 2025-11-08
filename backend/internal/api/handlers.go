@@ -168,7 +168,7 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 		}
 
 		// worker pool to limit concurrent HeadObject calls
-		const workers = 8
+		const workers = 4
 		type item struct {
 			img Image
 			ok  bool
