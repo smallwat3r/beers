@@ -73,8 +73,13 @@ func parseMonthFromLastKey(lastKey string) (time.Time, error) {
 
 func monthPrefix(t time.Time) string { return t.Format("2006/01/") }
 
-// findFirstNonEmptyMonth searches backward up to maxBack months starting at start
-func findFirstNonEmptyMonth(ctx context.Context, client s3client.S3Client, bucket string, start time.Time, maxBack int) (*s3.ListObjectsV2Output, time.Time, error) {
+func findFirstNonEmptyMonth(
+	ctx context.Context,
+	client s3client.S3Client,
+	bucket string,
+	start time.Time,
+	maxBack int,
+) (*s3.ListObjectsV2Output, time.Time, error) {
 	cur := start
 	for i := 0; i < maxBack; i++ {
 		prefix := monthPrefix(cur)
