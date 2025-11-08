@@ -1,0 +1,13 @@
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 20px;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.loader {
+  text-align: center;
+  padding: 20px;
+}

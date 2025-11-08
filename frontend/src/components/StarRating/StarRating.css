@@ -1,0 +1,10 @@
+.star-rating {
+  display: inline-block;
+  font-size: 20px;
+  color: var(--color-star-rating);
+  margin-right: 8px;
+}
+
+.star.empty {
+  color: var(--color-star-empty);
+}

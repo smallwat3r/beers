@@ -1,0 +1,5 @@
+.app {
+  font-family: var(--font-family-sans);
+  display: flex;
+  justify-content: center;
+}
