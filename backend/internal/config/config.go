@@ -14,29 +14,29 @@ type AppConfig struct {
 }
 
 func Load() (*AppConfig, error) {
-	cfg := &AppConfig{
-		BucketName:      os.Getenv("BUCKET_NAME"),
-		AccountID:       os.Getenv("R2_ACCOUNT_ID"),
-		AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
-		SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
-		PublicURL:       os.Getenv("R2_PUBLIC_URL"),
+	envs := map[string]*string{
+		"BUCKET_NAME":           nil,
+		"R2_ACCOUNT_ID":         nil,
+		"R2_ACCESS_KEY_ID":      nil,
+		"R2_SECRET_ACCESS_KEY":  nil,
+		"R2_PUBLIC_URL":         nil,
 	}
 
-	if cfg.BucketName == "" {
-		return nil, fmt.Errorf("environment variable BUCKET_NAME is not set")
-	}
-	if cfg.AccountID == "" {
-		return nil, fmt.Errorf("environment variable R2_ACCOUNT_ID is not set")
-	}
-	if cfg.AccessKeyID == "" {
-		return nil, fmt.Errorf("environment variable R2_ACCESS_KEY_ID is not set")
-	}
-	if cfg.SecretAccessKey == "" {
-		return nil, fmt.Errorf("environment variable R2_SECRET_ACCESS_KEY is not set")
-	}
-	if cfg.PublicURL == "" {
-		return nil, fmt.Errorf("environment variable R2_PUBLIC_URL is not set")
+	// populate map and check missing
+	for key := range envs {
+		val := os.Getenv(key)
+		if val == "" {
+			return nil, fmt.Errorf("environment variable %s is not set", key)
+		}
+		envs[key] = &val
 	}
 
-	return cfg, nil
+	return &AppConfig{
+		BucketName:      *envs["BUCKET_NAME"],
+		AccountID:       *envs["R2_ACCOUNT_ID"],
+		AccessKeyID:     *envs["R2_ACCESS_KEY_ID"],
+		SecretAccessKey: *envs["R2_SECRET_ACCESS_KEY"],
+		PublicURL:       *envs["R2_PUBLIC_URL"],
+	}, nil
 }
+
