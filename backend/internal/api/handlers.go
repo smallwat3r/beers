@@ -142,7 +142,7 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 				continue
 			}
 			if *obj.Key == "latest.jpg" {
-				continue  // skip sentinel
+				continue // skip sentinel
 			}
 			keys = append(keys, obj)
 		}
@@ -225,32 +225,24 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			}
 		}
 
-		// sort by metadata date desc
+		// sorting
 		dateLayout := "2006-01-02 15:04:05"
 		sort.SliceStable(images, func(i, j int) bool {
-			ti, _ := time.Parse(dateLayout, images[i].Metadata.Date)
-			tj, _ := time.Parse(dateLayout, images[j].Metadata.Date)
+			ti, errI := time.Parse(dateLayout, images[i].Metadata.Date)
+			tj, errJ := time.Parse(dateLayout, images[j].Metadata.Date)
+
+			if errI != nil || errJ != nil {
+				// fallback to key sort
+				return images[i].Key > images[j].Key
+			}
+
 			return ti.After(tj)
 		})
 
-		// compute HasMore by probing one earlier month than the one we used
-		var hasMore bool
-		if _, _, probeErr := findFirstNonEmptyMonth(
-			ctx,
-			client,
-			cfg.BucketName,
-			monthFound.AddDate(0, -1, 0),
-			1,
-		); probeErr == nil {
-			out2, _, _ := findFirstNonEmptyMonth(
-				ctx,
-				client,
-				cfg.BucketName,
-				monthFound.AddDate(0, -1, 0),
-				1,
-			)
-			hasMore = out2 != nil && len(out2.Contents) > 0
-		}
+		// probe one earlier month than the one we used.
+		prevMonth := monthFound.AddDate(0, -1, 0)
+		out2, _, err := findFirstNonEmptyMonth(ctx, client, cfg.BucketName, prevMonth, 1)
+		hasMore := err == nil && out2 != nil && len(out2.Contents) > 0
 
 		resp := ImageResponse{
 			Images:  images,

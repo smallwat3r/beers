@@ -15,26 +15,99 @@
   background-color: var(--color-bg-light);
   border-radius: 8px;
   overflow: hidden;
-  max-width: 80vw;
-  max-height: 80vh;
+  max-width: 90vw;
+  max-height: 90vh;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
 }
 
 .modal-content img {
-  width: 50%;
+  width: 100%;
   height: auto;
   object-fit: cover;
   aspect-ratio: 1 / 1;
 }
 
 .modal-content .image-metadata {
-  width: 50%;
+  width: 100%;
   padding: 32px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+@media (min-width: 768px) {
+  .modal-content {
+    flex-direction: row;
+    max-width: 80vw;
+    max-height: 80vh;
+  }
+
+  .modal-content img {
+    width: 50%;
+  }
+
+  .modal-content .image-metadata {
+    width: 50%;
+  }
+}
+
+@media (max-width: 767px) {
+  .modal-content {
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-content img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    aspect-ratio: auto;
+  }
+
+  .modal-content .image-metadata {
+    padding: 16px 20px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    overflow-y: visible;
+    box-sizing: border-box;
+  }
+
+  .metadata-section {
+    margin-bottom: 16px;
+  }
+
+  .beer-name {
+    font-size: 16px;
+  }
+
+  .beer-style {
+    font-size: 12px;
+  }
+
+  .rating-display {
+    font-size: 12px;
+  }
+
+  .brewery-name {
+    font-size: 14px;
+  }
+
+  .comment {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .date {
+    font-size: 10px;
+    align-items: flex-start;
+  }
+
+  .metadata-footer {
+    text-align: left;
+  }
 }
 
 .metadata-body {
