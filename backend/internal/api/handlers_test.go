@@ -154,13 +154,13 @@ func TestParseMonthFromLastKey(t *testing.T) {
 	}{
 		{
 			name:      "valid lastKey",
-			lastKey:   "2025/11/image.jpg",
+			lastKey:   "2025/11/08/WEBP/image.webp",
 			expected:  time.Date(2025, time.November, 1, 0, 0, 0, 0, time.UTC),
 			expectErr: false,
 		},
 		{
 			name:      "invalid lastKey",
-			lastKey:   "2025-11-image.jpg",
+			lastKey:   "2025-11-08-webp-image.webp",
 			expectErr: true,
 		},
 		{
