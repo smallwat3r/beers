@@ -32,6 +32,9 @@ func TestLoad(t *testing.T) {
 	if cfg.PublicURL != "https://test.com" {
 		t.Errorf("expected PublicURL to be 'https://test.com', got %s", cfg.PublicURL)
 	}
+	if cfg.BucketRegion != "auto" {
+		t.Errorf("expected BucketRegion to be 'auto', got %s", cfg.BucketRegion)
+	}
 
 	os.Unsetenv("BUCKET_NAME")
 	_, err = Load()

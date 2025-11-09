@@ -117,9 +117,8 @@ func newCheckinMetadata(m map[string]string) CheckinMetadata {
 	}
 }
 
-func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc {
+func GetImages(ctx context.Context, client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
 		lastKey := r.URL.Query().Get("lastKey")
 
 		var startFrom time.Time

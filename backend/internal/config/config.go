@@ -11,6 +11,8 @@ type AppConfig struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	PublicURL       string
+	BucketRegion    string
+	Port            string
 }
 
 func Load() (*AppConfig, error) {
@@ -31,11 +33,23 @@ func Load() (*AppConfig, error) {
 		envs[key] = &val
 	}
 
+	bucketRegion := os.Getenv("BUCKET_REGION")
+	if bucketRegion == "" {
+		bucketRegion = "auto"
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	return &AppConfig{
 		BucketName:      *envs["BUCKET_NAME"],
 		AccountID:       *envs["R2_ACCOUNT_ID"],
 		AccessKeyID:     *envs["R2_ACCESS_KEY_ID"],
 		SecretAccessKey: *envs["R2_SECRET_ACCESS_KEY"],
 		PublicURL:       *envs["R2_PUBLIC_URL"],
+		BucketRegion:    bucketRegion,
+		Port:            port,
 	}, nil
 }

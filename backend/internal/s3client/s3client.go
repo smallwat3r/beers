@@ -17,6 +17,7 @@ type S3Client interface {
 		params *s3.ListObjectsV2Input,
 		optFns ...func(*s3.Options),
 	) (*s3.ListObjectsV2Output, error)
+
 	HeadObject(
 		ctx context.Context,
 		params *s3.HeadObjectInput,
@@ -24,7 +25,12 @@ type S3Client interface {
 	) (*s3.HeadObjectOutput, error)
 }
 
-func New(ctx context.Context, cfg *config.AppConfig) (*s3.Client, error) {
+func NewS3Client(ctx context.Context, bucketRegion string) (*s3.Client, error) {
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
 	r2Resolver := aws.EndpointResolverWithOptionsFunc(
 		func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
@@ -41,7 +47,7 @@ func New(ctx context.Context, cfg *config.AppConfig) (*s3.Client, error) {
 		awsconfig.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
 		),
-		awsconfig.WithRegion("auto"),
+		awsconfig.WithRegion(bucketRegion),
 	)
 	if err != nil {
 		return nil, err
