@@ -33,11 +33,39 @@
   cursor: pointer;
   line-height: 1;
   padding: 0;
-  z-index: 1010;
+  z-index: 1020;
 }
 
 .close-button:hover {
   color: var(--color-text-dark);
+}
+
+.prev-button,
+.next-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: transparent;
+  color: white;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 10px;
+  z-index: 1010;
+  transition: background-color 0.3s;
+}
+
+.prev-button:hover,
+.next-button:hover {
+  background-color: transparent;
+}
+
+.prev-button {
+  left: 20px;
+}
+
+.next-button {
+  right: 20px;
 }
 
 .modal-content img {
@@ -191,4 +219,18 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+}
+
+.next-button .loader {
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #000;
+  border-radius: 50%;
+  width: 0.1rem;
+  height: 0.1rem;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

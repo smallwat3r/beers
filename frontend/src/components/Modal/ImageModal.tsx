@@ -1,14 +1,23 @@
 import { h } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import { Image as ImageType } from '../../types';
 import { StarRating } from '../StarRating/StarRating';
 import './ImageModal.css';
 
 type ImageModalProps = {
   image: ImageType;
+  isLoading: boolean;
   onClose: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  showPrevious: boolean;
+  showNext: boolean;
 };
 
-export const ImageModal = ({ image, onClose }: ImageModalProps) => {
+export const ImageModal = ({ image, isLoading, onClose, onNext, onPrevious, showPrevious, showNext }: ImageModalProps) => {
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchEndX, setTouchEndX] = useState(0);
+
   const locationParts = [
     image.metadata.venue,
     image.metadata.city,
@@ -16,8 +25,49 @@ export const ImageModal = ({ image, onClose }: ImageModalProps) => {
     image.metadata.country,
   ].filter(Boolean); // filter out empty strings
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowRight') {
+      onNext();
+    } else if (e.key === 'ArrowLeft') {
+      onPrevious();
+    }
+  };
+
+  const handleTouchStart = (e: TouchEvent) => {
+    setTouchStartX(e.changedTouches[0].screenX);
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    setTouchEndX(e.changedTouches[0].screenX);
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onNext, onPrevious]);
+
+  useEffect(() => {
+    if (touchEndX === 0) return;
+
+    if (touchStartX > touchEndX + 50) {
+      onNext();
+    }
+
+    if (touchStartX < touchEndX - 50) {
+      onPrevious();
+    }
+  }, [touchEndX]);
+
   return (
-    <div class="modal-overlay" onClick={onClose}>
+    <div class="modal-overlay" onClick={onClose} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {showPrevious && <button class="prev-button" onClick={(e) => { e.stopPropagation(); onPrevious(); }}>&#10094;</button>}
+      {showNext && (
+        <button class="next-button" onClick={(e) => { e.stopPropagation(); onNext(); }}>
+          {isLoading ? <div class="loader"></div> : <span>&#10095;</span>}
+        </button>
+      )}
       <div class="modal-content" onClick={(e) => e.stopPropagation()}>
         <button class="close-button" onClick={onClose}>&times;</button>
         <img src={image.url} alt={image.key} />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { Image } from '../types';
 
 export const useImages = () => {
@@ -8,7 +8,11 @@ export const useImages = () => {
   const [error, setError] = useState<Error | null>(null);
   const [lastKey, setLastKey] = useState<string>('');
 
+  const stateRef = useRef({ isLoading, hasMore, lastKey });
+  stateRef.current = { isLoading, hasMore, lastKey };
+
   const loadImages = useCallback(async () => {
+    const { isLoading, hasMore, lastKey } = stateRef.current;
     if (isLoading || !hasMore) return;
 
     setIsLoading(true);
@@ -26,7 +30,11 @@ export const useImages = () => {
 
       const data = await response.json();
 
-      setImages(prev => [...prev, ...data.images]);
+      setImages(prev => {
+        const existingKeys = new Set(prev.map(img => img.key));
+        const newImages = data.images.filter((img: Image) => !existingKeys.has(img.key));
+        return [...prev, ...newImages];
+      });
       setHasMore(data.has_more);
 
       if (data.images.length > 0) {
@@ -39,10 +47,12 @@ export const useImages = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, hasMore, lastKey]);
+  }, []);
 
   // initial load
-  useEffect(() => loadImages(), []);
+  useEffect(() => {
+    loadImages();
+  }, []);
 
   // infinite scroll
   useEffect(() => {
@@ -51,13 +61,13 @@ export const useImages = () => {
         window.innerHeight + document.documentElement.scrollTop >=
         document.documentElement.offsetHeight - 500;
 
-      if (!nearBottom || isLoading) return;
+      if (!nearBottom || stateRef.current.isLoading) return;
       loadImages();
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLoading, loadImages]);
+  }, [loadImages]);
 
   // ensure full-page content fills viewport
   useEffect(() => {
