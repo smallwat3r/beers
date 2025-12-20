@@ -11,9 +11,14 @@ export const useImages = () => {
   const stateRef = useRef({ isLoading, hasMore, lastKey });
   stateRef.current = { isLoading, hasMore, lastKey };
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const loadImages = useCallback(async () => {
     const { isLoading, hasMore, lastKey } = stateRef.current;
     if (isLoading || !hasMore) return;
+
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
 
     setIsLoading(true);
     setError(null);
@@ -23,7 +28,9 @@ export const useImages = () => {
         ? `/api/images?lastKey=${encodeURIComponent(lastKey)}`
         : '/api/images';
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: abortControllerRef.current.signal,
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -41,7 +48,7 @@ export const useImages = () => {
         setLastKey(data.images[data.images.length - 1].key);
       }
     } catch (e) {
-      if (e instanceof Error) {
+      if (e instanceof Error && e.name !== 'AbortError') {
         setError(e);
       }
     } finally {
@@ -49,9 +56,12 @@ export const useImages = () => {
     }
   }, []);
 
-  // initial load
+  // initial load and cleanup on unmount
   useEffect(() => {
     loadImages();
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
   // infinite scroll

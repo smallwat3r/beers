@@ -6,9 +6,23 @@ export const ImageCard = ({ image, onClick }: { image: ImageType, onClick: (imag
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const img = new window.Image();
+
+    img.onload = () => {
+      if (!cancelled) setIsLoaded(true);
+    };
+    img.onerror = () => {
+      if (!cancelled) setIsLoaded(true);
+    };
     img.src = image.url;
-    img.onload = () => setIsLoaded(true);
+
+    return () => {
+      cancelled = true;
+      img.onload = null;
+      img.onerror = null;
+      img.src = '';
+    };
   }, [image.url]);
 
   return (
