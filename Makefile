@@ -36,10 +36,10 @@ docker-build: ## Build the Docker image
 	docker build -t beers-app .
 
 docker-run: ## Run the application in a Docker container
-	docker run -p 8080:8080 beers-app
+	docker run --env-file .env -p 8080:8080 beers-app
 
 docker-compose-up: ## Start the application with Docker Compose
-	docker-compose up -d
+	docker compose up -d --build
 
 docker-compose-down: ## Stop the application with Docker Compose
-	docker-compose down
+	docker compose down
