@@ -88,16 +88,25 @@
 @media (min-width: 768px) {
   .modal-content {
     flex-direction: row;
-    max-width: 80vw;
+    width: min(900px, 90vw);
+    height: min(520px, 80vh);
+    max-width: 90vw;
     max-height: 80vh;
   }
 
+  /* square image whose side equals the modal height, so every photo
+     renders at the same size regardless of its aspect ratio */
   .modal-content img {
-    width: 50%;
+    height: 100%;
+    width: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    flex-shrink: 0;
   }
 
   .modal-content .image-metadata {
-    width: 50%;
+    flex: 1;
+    width: auto;
   }
 }
 
@@ -116,8 +125,8 @@
   .modal-content img {
     width: 100%;
     height: auto;
-    object-fit: contain;
-    aspect-ratio: auto;
+    object-fit: cover;
+    aspect-ratio: 1 / 1;
     background-color: var(--color-bg-off-white);
   }
 
