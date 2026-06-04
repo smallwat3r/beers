@@ -39,12 +39,16 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/api/images", rateLimit(api.GetImages(ctx, s3Client, cfg)))
+	mux.Handle("/api/images", rateLimit(api.GetImages(s3Client, cfg)))
 	mux.Handle("/", staticHandler())
 
 	server := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: mux,
+		Addr:              ":" + cfg.Port,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	go func() {

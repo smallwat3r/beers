@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
@@ -73,22 +72,45 @@ func parseMonthFromLastKey(lastKey string) (time.Time, error) {
 
 func monthPrefix(t time.Time) string { return t.Format("2006/01/") }
 
+// listMonthObjects drains every page for the given prefix so months with more
+// than one page (1000 objects) are fully returned instead of silently truncated.
+func listMonthObjects(
+	ctx context.Context,
+	client s3client.S3Client,
+	bucket, prefix string,
+) ([]types.Object, error) {
+	var objects []types.Object
+	token := ""
+	for {
+		out, err := s3client.ListObjects(ctx, client, bucket, prefix, token)
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, out.Contents...)
+		if out.IsTruncated == nil || !*out.IsTruncated || out.NextContinuationToken == nil {
+			break
+		}
+		token = *out.NextContinuationToken
+	}
+	return objects, nil
+}
+
 func findFirstNonEmptyMonth(
 	ctx context.Context,
 	client s3client.S3Client,
 	bucket string,
 	start time.Time,
 	maxBack int,
-) (*s3.ListObjectsV2Output, time.Time, error) {
+) ([]types.Object, time.Time, error) {
 	cur := start
 	for i := 0; i < maxBack; i++ {
 		prefix := monthPrefix(cur)
-		out, err := s3client.ListObjects(ctx, client, bucket, prefix, "")
+		objects, err := listMonthObjects(ctx, client, bucket, prefix)
 		if err != nil {
 			return nil, time.Time{}, fmt.Errorf("list %s: %w", prefix, err)
 		}
-		if len(out.Contents) > 0 {
-			return out, cur, nil
+		if len(objects) > 0 {
+			return objects, cur, nil
 		}
 		cur = cur.AddDate(0, -1, 0)
 	}
@@ -117,8 +139,9 @@ func newCheckinMetadata(m map[string]string) CheckinMetadata {
 	}
 }
 
-func GetImages(ctx context.Context, client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc {
+func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		lastKey := r.URL.Query().Get("lastKey")
 
 		var startFrom time.Time
@@ -136,7 +159,7 @@ func GetImages(ctx context.Context, client s3client.S3Client, cfg *config.AppCon
 		}
 
 		// find most recent month with content
-		out, monthFound, err := findFirstNonEmptyMonth(
+		objects, monthFound, err := findFirstNonEmptyMonth(
 			ctx,
 			client,
 			cfg.BucketName,
@@ -149,7 +172,7 @@ func GetImages(ctx context.Context, client s3client.S3Client, cfg *config.AppCon
 			json.NewEncoder(w).Encode(map[string]string{"error": "Error listing objects"})
 			return
 		}
-		if out == nil {
+		if len(objects) == 0 {
 			// no images at all in the backward window
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(ImageResponse{Images: []Image{}, HasMore: false})
@@ -157,8 +180,8 @@ func GetImages(ctx context.Context, client s3client.S3Client, cfg *config.AppCon
 		}
 
 		// collect keys to process
-		keys := make([]types.Object, 0, len(out.Contents))
-		for _, obj := range out.Contents {
+		keys := make([]types.Object, 0, len(objects))
+		for _, obj := range objects {
 			// ensure to only include images in webp format
 			if obj.Key == nil || !strings.Contains(*obj.Key, "/WEBP/") {
 				continue
@@ -253,8 +276,8 @@ func GetImages(ctx context.Context, client s3client.S3Client, cfg *config.AppCon
 
 		// probe one earlier month than the one we used
 		prevMonth := monthFound.AddDate(0, -1, 0)
-		out2, _, err := findFirstNonEmptyMonth(ctx, client, cfg.BucketName, prevMonth, 1)
-		hasMore := err == nil && out2 != nil && len(out2.Contents) > 0
+		prev, _, err := findFirstNonEmptyMonth(ctx, client, cfg.BucketName, prevMonth, 1)
+		hasMore := err == nil && len(prev) > 0
 
 		resp := ImageResponse{
 			Images:  images,

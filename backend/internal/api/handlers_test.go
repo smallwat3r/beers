@@ -77,7 +77,7 @@ func TestGetImages(t *testing.T) {
 		},
 	}
 
-	handler := GetImages(context.Background(), mockClient, cfg)
+	handler := GetImages(mockClient, cfg)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
