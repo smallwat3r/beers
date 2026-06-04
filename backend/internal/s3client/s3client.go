@@ -25,35 +25,22 @@ type S3Client interface {
 	) (*s3.HeadObjectOutput, error)
 }
 
-func NewS3Client(ctx context.Context, bucketRegion string) (*s3.Client, error) {
-	cfg, err := config.Load()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
-	}
-
-	r2Resolver := aws.EndpointResolverWithOptionsFunc(
-		func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				URL:               fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.AccountID),
-				HostnameImmutable: true,
-				Source:            aws.EndpointSourceCustom,
-			}, nil
-		},
-	)
-
+func NewS3Client(ctx context.Context, cfg *config.AppConfig) (*s3.Client, error) {
 	awsCfg, err := awsconfig.LoadDefaultConfig(
 		ctx,
-		awsconfig.WithEndpointResolverWithOptions(r2Resolver),
 		awsconfig.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
 		),
-		awsconfig.WithRegion(bucketRegion),
+		awsconfig.WithRegion(cfg.BucketRegion),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return s3.NewFromConfig(awsCfg), nil
+	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.AccountID)
+	return s3.NewFromConfig(awsCfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(endpoint)
+	}), nil
 }
 
 func ListObjects(

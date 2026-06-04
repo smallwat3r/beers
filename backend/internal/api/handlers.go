@@ -163,7 +163,48 @@ func newCheckinMetadata(m map[string]string) CheckinMetadata {
 	}
 }
 
+// metadataCache memoizes per-object checkin metadata. R2 objects are immutable
+// here, so a cache hit avoids a HeadObject round-trip entirely. It is bounded to
+// keep memory in check, evicting an arbitrary batch when full (any entry is safe
+// to drop since values never change).
+type metadataCache struct {
+	mu      sync.RWMutex
+	entries map[string]CheckinMetadata
+	max     int
+}
+
+func newMetadataCache(max int) *metadataCache {
+	return &metadataCache{entries: make(map[string]CheckinMetadata, max), max: max}
+}
+
+func (c *metadataCache) get(key string) (CheckinMetadata, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	md, ok := c.entries[key]
+	return md, ok
+}
+
+func (c *metadataCache) set(key string, md CheckinMetadata) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.entries[key]; !ok && len(c.entries) >= c.max {
+		evict := c.max / 10
+		if evict < 1 {
+			evict = 1
+		}
+		for k := range c.entries {
+			delete(c.entries, k)
+			evict--
+			if evict == 0 {
+				break
+			}
+		}
+	}
+	c.entries[key] = md
+}
+
 func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc {
+	cache := newMetadataCache(5000)
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		lastKey := r.URL.Query().Get("lastKey")
@@ -214,7 +255,7 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 		}
 
 		// worker pool to limit concurrent HeadObject calls
-		const workers = 4
+		const workers = 8
 		type item struct {
 			img Image
 			ok  bool
@@ -229,25 +270,28 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			for obj := range jobs {
 				key := *obj.Key
 
-				meta, err := s3client.GetObjectMetadata(
-					ctx,
-					client,
-					cfg.BucketName,
-					key,
-				)
-				if err != nil {
-					log.Printf("error getting metadata %s: %v", key, err)
-					results <- item{ok: false}
-					continue
-				}
-
-				md := newCheckinMetadata(meta.Metadata)
-
 				imageURL, err := url.JoinPath(cfg.PublicURL, key)
 				if err != nil {
 					log.Printf("failed to join URL %q and %q: %v", cfg.PublicURL, key, err)
 					results <- item{ok: false}
 					continue
+				}
+
+				md, ok := cache.get(key)
+				if !ok {
+					meta, err := s3client.GetObjectMetadata(
+						ctx,
+						client,
+						cfg.BucketName,
+						key,
+					)
+					if err != nil {
+						log.Printf("error getting metadata %s: %v", key, err)
+						results <- item{ok: false}
+						continue
+					}
+					md = newCheckinMetadata(meta.Metadata)
+					cache.set(key, md)
 				}
 
 				results <- item{

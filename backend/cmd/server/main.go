@@ -5,20 +5,101 @@ import (
 	"beers/backend/internal/config"
 	"beers/backend/internal/s3client"
 	"context"
-	"golang.org/x/time/rate"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
+// ipRateLimiter keeps a token-bucket limiter per client IP so one client cannot
+// exhaust the budget of others. Stale entries are evicted periodically to keep
+// memory bounded.
+type ipRateLimiter struct {
+	mu       sync.Mutex
+	limiters map[string]*ipLimiterEntry
+	rate     rate.Limit
+	burst    int
+	ttl      time.Duration
+}
+
+type ipLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+func newIPRateLimiter(r rate.Limit, burst int, ttl time.Duration) *ipRateLimiter {
+	l := &ipRateLimiter{
+		limiters: make(map[string]*ipLimiterEntry),
+		rate:     r,
+		burst:    burst,
+		ttl:      ttl,
+	}
+	go l.cleanupLoop()
+	return l
+}
+
+func (l *ipRateLimiter) allow(ip string, now time.Time) bool {
+	l.mu.Lock()
+	entry, ok := l.limiters[ip]
+	if !ok {
+		entry = &ipLimiterEntry{limiter: rate.NewLimiter(l.rate, l.burst)}
+		l.limiters[ip] = entry
+	}
+	entry.lastSeen = now
+	limiter := entry.limiter
+	l.mu.Unlock()
+	return limiter.Allow()
+}
+
+func (l *ipRateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(l.ttl)
+	defer ticker.Stop()
+	for range ticker.C {
+		cutoff := time.Now().Add(-l.ttl)
+		l.mu.Lock()
+		for ip, entry := range l.limiters {
+			if entry.lastSeen.Before(cutoff) {
+				delete(l.limiters, ip)
+			}
+		}
+		l.mu.Unlock()
+	}
+}
+
+// clientIP extracts the originating IP, honoring X-Forwarded-For / X-Real-IP set
+// by a trusted upstream proxy (the app runs behind Cloudflare) and falling back
+// to the transport remote address.
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			return strings.TrimSpace(xff[:i])
+		}
+		return strings.TrimSpace(xff)
+	}
+	if xrip := r.Header.Get("X-Real-IP"); xrip != "" {
+		return strings.TrimSpace(xrip)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 func rateLimit(next http.Handler) http.Handler {
-	limiter := rate.NewLimiter(1, 3)
+	// allow short bursts (initial gallery load fans out a few requests) while
+	// capping sustained throughput per client
+	limiter := newIPRateLimiter(rate.Limit(5), 10, 10*time.Minute)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !limiter.Allow() {
+		if !limiter.allow(clientIP(r), time.Now()) {
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 			return
 		}
@@ -33,7 +114,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	s3Client, err := s3client.NewS3Client(ctx, cfg.BucketRegion)
+	s3Client, err := s3client.NewS3Client(ctx, cfg)
 	if err != nil {
 		log.Fatalf("Error creating S3 client: %v", err)
 	}
