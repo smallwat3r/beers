@@ -9,7 +9,7 @@ export type CheckinMetadata = {
   city: string;
   state: string;
   country: string;
-  lat_lng: string;
+  latlng: string;
   date: string;
   style: string;
   abv: string;
@@ -17,11 +17,7 @@ export type CheckinMetadata = {
 
 export type Image = {
   url: string;
-  last_modified: string;
   key: string;
-  etag: string;
-  size: number;
-  storage_class: string;
   metadata: CheckinMetadata;
 };
 

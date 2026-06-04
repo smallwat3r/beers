@@ -84,17 +84,3 @@ func staticHandler() http.Handler {
 
 	return http.FileServer(http.Dir(distPath))
 }
-
-func rateLimiter(limiter *rate.Limiter, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !limiter.Allow() {
-			http.Error(
-				w,
-				http.StatusText(http.StatusTooManyRequests),
-				http.StatusTooManyRequests,
-			)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}

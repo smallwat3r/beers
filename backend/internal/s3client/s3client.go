@@ -74,6 +74,25 @@ func ListObjects(
 	return client.ListObjectsV2(ctx, input)
 }
 
+// ObjectExistsWithPrefix reports whether at least one object exists under the
+// given prefix, using a single ListObjectsV2 call capped at one key so it never
+// paginates.
+func ObjectExistsWithPrefix(
+	ctx context.Context,
+	client S3Client,
+	bucketName, prefix string,
+) (bool, error) {
+	out, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket:  aws.String(bucketName),
+		Prefix:  aws.String(prefix),
+		MaxKeys: aws.Int32(1),
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(out.Contents) > 0, nil
+}
+
 func GetObjectMetadata(
 	ctx context.Context,
 	client S3Client,

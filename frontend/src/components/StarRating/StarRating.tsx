@@ -2,13 +2,14 @@ import { h, Fragment } from 'preact';
 import './StarRating.css';
 
 type StarRatingProps = {
-  rating: number;
+  rating: number | string;
   maxStars?: number;
 };
 
 export const StarRating = ({ rating, maxStars = 5 }: StarRatingProps) => {
-  const fullStars = Math.floor(rating);
-  const fraction = rating % 1;
+  const value = Math.max(0, Math.min(maxStars, Number(rating) || 0));
+  const fullStars = Math.floor(value);
+  const fraction = value % 1;
   const emptyStars = maxStars - fullStars - (fraction > 0 ? 1 : 0);
 
   return (
@@ -24,7 +25,7 @@ export const StarRating = ({ rating, maxStars = 5 }: StarRatingProps) => {
       {[...Array(emptyStars)].map((_, i) => (
         <span key={`empty-${i}`} class="star empty">★</span>
       ))}
-      {rating >= 4 && <span class="heart">❤</span>}
+      {value >= 4 && <span class="heart">❤</span>}
     </div>
   );
 };

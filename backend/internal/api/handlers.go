@@ -117,6 +117,30 @@ func findFirstNonEmptyMonth(
 	return nil, time.Time{}, nil
 }
 
+// hasOlderMonth reports whether any month within maxBack months before start
+// contains at least one object. It uses a cheap existence check per month so it
+// mirrors the load lookback window without draining full pages.
+func hasOlderMonth(
+	ctx context.Context,
+	client s3client.S3Client,
+	bucket string,
+	start time.Time,
+	maxBack int,
+) (bool, error) {
+	cur := start
+	for i := 0; i < maxBack; i++ {
+		exists, err := s3client.ObjectExistsWithPrefix(ctx, client, bucket, monthPrefix(cur))
+		if err != nil {
+			return false, err
+		}
+		if exists {
+			return true, nil
+		}
+		cur = cur.AddDate(0, -1, 0)
+	}
+	return false, nil
+}
+
 func newCheckinMetadata(m map[string]string) CheckinMetadata {
 	if m == nil {
 		m = map[string]string{}
@@ -217,11 +241,6 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 					continue
 				}
 
-				m := meta.Metadata
-				if m == nil {
-					m = map[string]string{}
-				}
-
 				md := newCheckinMetadata(meta.Metadata)
 
 				imageURL, err := url.JoinPath(cfg.PublicURL, key)
@@ -274,10 +293,14 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			return ti.After(tj)
 		})
 
-		// probe one earlier month than the one we used
+		// probe earlier months using the same window as the load so a gap of
+		// empty months does not stop pagination prematurely
 		prevMonth := monthFound.AddDate(0, -1, 0)
-		prev, _, err := findFirstNonEmptyMonth(ctx, client, cfg.BucketName, prevMonth, 1)
-		hasMore := err == nil && len(prev) > 0
+		hasMore, err := hasOlderMonth(ctx, client, cfg.BucketName, prevMonth, 12)
+		if err != nil {
+			log.Printf("has_more probe error: %v", err)
+			hasMore = false
+		}
 
 		resp := ImageResponse{
 			Images:  images,
