@@ -125,7 +125,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           mux,
+		Handler:           securityHeaders(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -154,6 +154,24 @@ func main() {
 	log.Println("Server exiting")
 }
 
+// securityHeaders applies a conservative set of response headers to every
+// request. nosniff also hardens the JSON error paths, which do not always set an
+// explicit Content-Type. The CSP allows the bundled assets and remote images
+// (served from the R2 public URL over https) while blocking framing and plugins.
+func securityHeaders(next http.Handler) http.Handler {
+	const csp = "default-src 'self'; img-src 'self' https: data:; " +
+		"style-src 'self' 'unsafe-inline'; script-src 'self'; " +
+		"object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h.Set("Content-Security-Policy", csp)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func staticHandler() http.Handler {
 	ex, err := os.Executable()
 	if err != nil {
@@ -163,5 +181,16 @@ func staticHandler() http.Handler {
 	exPath := filepath.Dir(ex)
 	distPath := filepath.Join(exPath, "dist")
 
-	return http.FileServer(http.Dir(distPath))
+	fs := http.FileServer(http.Dir(distPath))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Vite emits content-hashed asset filenames, so they can be cached
+		// indefinitely; the HTML entry point must stay revalidated so clients
+		// never pin a stale SPA against fresh assets.
+		if strings.HasPrefix(r.URL.Path, "/assets/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		fs.ServeHTTP(w, r)
+	})
 }

@@ -95,7 +95,25 @@ func listMonthObjects(
 	return objects, nil
 }
 
-func findFirstNonEmptyMonth(
+// filterWebpObjects keeps only the WEBP image objects, which are the only ones
+// the gallery renders. "Has images" is defined by this set everywhere so a month
+// never counts as non-empty unless it would actually produce a page.
+func filterWebpObjects(objs []types.Object) []types.Object {
+	webp := make([]types.Object, 0, len(objs))
+	for _, obj := range objs {
+		if obj.Key == nil || !strings.Contains(*obj.Key, "/WEBP/") {
+			continue
+		}
+		webp = append(webp, obj)
+	}
+	return webp
+}
+
+// findFirstMonthWithImages walks backwards up to maxBack months and returns the
+// WEBP objects of the first month that contains any. Defining "has images" by
+// WEBP presence (not any object) means the caller never receives a month that
+// would filter down to an empty page.
+func findFirstMonthWithImages(
 	ctx context.Context,
 	client s3client.S3Client,
 	bucket string,
@@ -109,8 +127,8 @@ func findFirstNonEmptyMonth(
 		if err != nil {
 			return nil, time.Time{}, fmt.Errorf("list %s: %w", prefix, err)
 		}
-		if len(objects) > 0 {
-			return objects, cur, nil
+		if webp := filterWebpObjects(objects); len(webp) > 0 {
+			return webp, cur, nil
 		}
 		cur = cur.AddDate(0, -1, 0)
 	}
@@ -118,8 +136,8 @@ func findFirstNonEmptyMonth(
 }
 
 // hasOlderMonth reports whether any month within maxBack months before start
-// contains at least one object. It uses a cheap existence check per month so it
-// mirrors the load lookback window without draining full pages.
+// contains WEBP images, mirroring the load definition so has_more never promises
+// a page that resolves to empty.
 func hasOlderMonth(
 	ctx context.Context,
 	client s3client.S3Client,
@@ -127,18 +145,11 @@ func hasOlderMonth(
 	start time.Time,
 	maxBack int,
 ) (bool, error) {
-	cur := start
-	for i := 0; i < maxBack; i++ {
-		exists, err := s3client.ObjectExistsWithPrefix(ctx, client, bucket, monthPrefix(cur))
-		if err != nil {
-			return false, err
-		}
-		if exists {
-			return true, nil
-		}
-		cur = cur.AddDate(0, -1, 0)
+	objects, _, err := findFirstMonthWithImages(ctx, client, bucket, start, maxBack)
+	if err != nil {
+		return false, err
 	}
-	return false, nil
+	return len(objects) > 0, nil
 }
 
 func newCheckinMetadata(m map[string]string) CheckinMetadata {
@@ -223,8 +234,8 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			startFrom = t.AddDate(0, -1, 0)
 		}
 
-		// find most recent month with content
-		objects, monthFound, err := findFirstNonEmptyMonth(
+		// find the most recent month that has WEBP images to render
+		keys, monthFound, err := findFirstMonthWithImages(
 			ctx,
 			client,
 			cfg.BucketName,
@@ -237,21 +248,11 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			json.NewEncoder(w).Encode(map[string]string{"error": "Error listing objects"})
 			return
 		}
-		if len(objects) == 0 {
+		if len(keys) == 0 {
 			// no images at all in the backward window
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(ImageResponse{Images: []Image{}, HasMore: false})
 			return
-		}
-
-		// collect keys to process
-		keys := make([]types.Object, 0, len(objects))
-		for _, obj := range objects {
-			// ensure to only include images in webp format
-			if obj.Key == nil || !strings.Contains(*obj.Key, "/WEBP/") {
-				continue
-			}
-			keys = append(keys, obj)
 		}
 
 		// worker pool to limit concurrent HeadObject calls
