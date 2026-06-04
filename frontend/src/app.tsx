@@ -41,13 +41,15 @@ export function App() {
   };
 
   useEffect(() => {
-    if (shouldAdvance && !isLoading && selectedImage) {
-      const currentIndex = images.findIndex((img) => img.key === selectedImage.key);
-      if (currentIndex < images.length - 1) {
-        setSelectedImage(images[currentIndex + 1]);
-        setShouldAdvance(false);
-      }
+    if (!shouldAdvance || isLoading || !selectedImage) return;
+    const currentIndex = images.findIndex((img) => img.key === selectedImage.key);
+    if (currentIndex < images.length - 1) {
+      setSelectedImage(images[currentIndex + 1]);
     }
+    // the load that this advance was waiting on has finished; clear the flag
+    // whether or not a newer image appeared so the next button never stays
+    // stuck in a loading state
+    setShouldAdvance(false);
   }, [images, isLoading, shouldAdvance, selectedImage]);
 
   const currentIndex = selectedImage ? images.findIndex((img) => img.key === selectedImage.key) : -1;
@@ -58,7 +60,7 @@ export function App() {
       {selectedImage && (
         <ImageModal
           image={selectedImage}
-          isLoading={isLoading}
+          loadingNext={shouldAdvance}
           onClose={closeModal}
           onNext={handleNext}
           onPrevious={handlePrevious}
