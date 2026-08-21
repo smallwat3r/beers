@@ -1,30 +1,9 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { Image as ImageType } from '../types';
 import './ImageCard.css';
 
 export const ImageCard = ({ image, onClick }: { image: ImageType, onClick: (image: ImageType) => void }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const img = new window.Image();
-
-    img.onload = () => {
-      if (!cancelled) setIsLoaded(true);
-    };
-    img.onerror = () => {
-      if (!cancelled) setIsLoaded(true);
-    };
-    img.src = image.url;
-
-    return () => {
-      cancelled = true;
-      img.onload = null;
-      img.onerror = null;
-      img.src = '';
-    };
-  }, [image.url]);
-
   const open = () => onClick(image);
 
   return (
@@ -41,9 +20,15 @@ export const ImageCard = ({ image, onClick }: { image: ImageType, onClick: (imag
       }}
     >
       <div class="image-container">
-        {isLoaded
-          ? <img src={image.url} alt={image.metadata.beer || image.key} />
-          : <div class="image-placeholder" />}
+        <img
+          src={image.url}
+          alt={image.metadata.beer || image.key}
+          loading="lazy"
+          decoding="async"
+          class={isLoaded ? 'loaded' : ''}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setIsLoaded(true)}
+        />
       </div>
     </div>
   );

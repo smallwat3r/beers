@@ -1,7 +1,8 @@
 .app {
   font-family: var(--font-family-sans);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
 .error-banner {

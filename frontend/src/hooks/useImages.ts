@@ -61,40 +61,31 @@ export const useImages = () => {
     }
   }, []);
 
-  // initial load and cleanup on unmount
+  // abort any in-flight request on unmount
+  useEffect(() => () => abortControllerRef.current?.abort(), []);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // infinite scroll: observe a sentinel below the grid instead of running work
+  // on every scroll event. Recreating the observer whenever images change makes
+  // observe() re-fire its initial callback, which covers both the first load
+  // and pages too short to scroll. After a failure only the explicit Retry
+  // button resumes loading, so a persistent error does not become a retry storm.
   useEffect(() => {
-    loadImages();
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
+    const node = sentinelRef.current;
+    if (!node) return;
 
-  // infinite scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      const nearBottom =
-        window.innerHeight + document.documentElement.scrollTop >=
-        document.documentElement.offsetHeight - 500;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !stateRef.current.error) {
+          loadImages();
+        }
+      },
+      { rootMargin: '500px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [images, error, loadImages]);
 
-      // after a failure only the explicit Retry button resumes loading, so a
-      // persistent error does not turn scrolling into a retry storm
-      if (!nearBottom || stateRef.current.isLoading || stateRef.current.error) return;
-      loadImages();
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadImages]);
-
-  // ensure full-page content fills viewport
-  useEffect(() => {
-    const isPageShort =
-      document.documentElement.scrollHeight <= window.innerHeight;
-
-    if (!isLoading && hasMore && !error && isPageShort) {
-      loadImages();
-    }
-  }, [images, isLoading, hasMore, error, loadImages]);
-
-  return { images, isLoading, hasMore, error, loadImages };
+  return { images, isLoading, hasMore, error, loadImages, sentinelRef };
 };

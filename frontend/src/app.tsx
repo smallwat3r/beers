@@ -7,7 +7,7 @@ import { useImages } from './hooks/useImages';
 import { Image as ImageType } from './types';
 
 export function App() {
-  const { images, isLoading, hasMore, error, loadImages } = useImages();
+  const { images, isLoading, hasMore, error, loadImages, sentinelRef } = useImages();
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [shouldAdvance, setShouldAdvance] = useState(false);
 
@@ -54,9 +54,19 @@ export function App() {
 
   const currentIndex = selectedImage ? images.findIndex((img) => img.key === selectedImage.key) : -1;
 
+  // warm the browser cache for the neighbouring images while the modal is
+  // open, so arrow navigation does not show a blank frame
+  useEffect(() => {
+    if (currentIndex < 0) return;
+    [images[currentIndex + 1], images[currentIndex - 1]].forEach((img) => {
+      if (img) new window.Image().src = img.url;
+    });
+  }, [currentIndex, images]);
+
   return (
     <div class="app">
       <ImageGrid images={images} isLoading={isLoading} hasMore={hasMore} onImageClick={openModal} />
+      <div ref={sentinelRef} class="scroll-sentinel" aria-hidden="true" />
       {error && (
         <div class="error-banner" role="alert">
           <span>Could not load images.</span>

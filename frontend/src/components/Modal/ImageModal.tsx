@@ -127,9 +127,9 @@ export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, sh
 
           <div class="metadata-footer">
             <p class="date">
-              {/* the space-separated datetime is not parseable by Safari, so
-                  convert it to ISO 8601 before constructing the Date */}
-              {new Date(image.metadata.date.replace(' ', 'T')).toLocaleString('en-GB')}
+              {/* metadata dates are RFC 2822 ("Fri, 21 Aug 2026 17:57:51 +0000"),
+                  which Date parses natively in all browsers */}
+              {new Date(image.metadata.date).toLocaleString('en-GB')}
               {image.metadata.venue !== "Untappd at Home" && (
                 <span> {locationParts.join(', ')}</span>
               )}

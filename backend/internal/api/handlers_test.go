@@ -57,8 +57,10 @@ func TestGetImages(t *testing.T) {
 		) (*s3.ListObjectsV2Output, error) {
 			return &s3.ListObjectsV2Output{
 				Contents: []types.Object{
-					{Key: aws.String("2025/11/08/WEBP/image1.webp")},
+					// image1 is the newest checkin but listed last, so the
+					// response order below proves the date sort ran
 					{Key: aws.String("2025/11/08/WEBP/image2.webp")},
+					{Key: aws.String("2025/11/08/WEBP/image1.webp")},
 				},
 			}, nil
 		},
@@ -67,11 +69,15 @@ func TestGetImages(t *testing.T) {
 			params *s3.HeadObjectInput,
 			optFns ...func(*s3.Options),
 		) (*s3.HeadObjectOutput, error) {
+			date := "Fri, 07 Nov 2025 12:00:00 +0000"
+			if *params.Key == "2025/11/08/WEBP/image1.webp" {
+				date = "Sat, 08 Nov 2025 12:00:00 +0000"
+			}
 			return &s3.HeadObjectOutput{
 				Metadata: map[string]string{
 					"id":   "123",
 					"beer": "Test Beer",
-					"date": "2025-11-08 12:00:00",
+					"date": date,
 				},
 			}, nil
 		},

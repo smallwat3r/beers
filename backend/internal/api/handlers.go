@@ -361,11 +361,11 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			}
 		}
 
-		// sorting
-		dateLayout := "2006-01-02 15:04:05"
+		// sort newest first; checkin dates are RFC 2822, e.g.
+		// "Fri, 21 Aug 2026 17:57:51 +0000"
 		sort.SliceStable(images, func(i, j int) bool {
-			ti, errI := time.Parse(dateLayout, images[i].Metadata.Date)
-			tj, errJ := time.Parse(dateLayout, images[j].Metadata.Date)
+			ti, errI := time.Parse(time.RFC1123Z, images[i].Metadata.Date)
+			tj, errJ := time.Parse(time.RFC1123Z, images[j].Metadata.Date)
 
 			if errI != nil || errJ != nil {
 				// fallback to key sort
