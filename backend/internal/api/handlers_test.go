@@ -151,6 +151,43 @@ func TestDecodeRFC2047Maybe(t *testing.T) {
 	}
 }
 
+func TestDecodeMetadataValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "plain text",
+			input:    "Hello World",
+			expected: "Hello World",
+		},
+		{
+			name:     "percent encoded",
+			input:    "Probably one of the best NA beer I%E2%80%99ve had!",
+			expected: "Probably one of the best NA beer I’ve had!",
+		},
+		{
+			name:     "rfc2047 encoded",
+			input:    "=?UTF-8?Q?Hello_=E2=82=AC_World?=",
+			expected: "Hello € World",
+		},
+		{
+			name:     "literal percent kept as is",
+			input:    "Would drink 100% again",
+			expected: "Would drink 100% again",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := decodeMetadataValue(tt.input); got != tt.expected {
+				t.Errorf("decodeMetadataValue() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestParseMonthFromLastKey(t *testing.T) {
 	tests := []struct {
 		name      string

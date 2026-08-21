@@ -61,6 +61,20 @@ func decodeRFC2047Maybe(s string) string {
 	return decoded
 }
 
+// decodeMetadataValue reverses the encodings the uploader may have applied to
+// fit non-ASCII text into S3 metadata headers: RFC 2047 words and percent
+// encoding (e.g. "I%E2%80%99ve" for a curly apostrophe). A value that merely
+// contains a literal "%" fails PathUnescape and is kept as is.
+func decodeMetadataValue(s string) string {
+	s = decodeRFC2047Maybe(s)
+	if strings.Contains(s, "%") {
+		if decoded, err := url.PathUnescape(s); err == nil {
+			s = decoded
+		}
+	}
+	return s
+}
+
 func parseMonthFromLastKey(lastKey string) (time.Time, error) {
 	// expected format: YYYY/MM/...
 	parts := strings.Split(lastKey, "/")
@@ -194,18 +208,18 @@ func newCheckinMetadata(m map[string]string) CheckinMetadata {
 	}
 	return CheckinMetadata{
 		ID:             m["id"],
-		Beer:           decodeRFC2047Maybe(m["beer"]),
-		Brewery:        decodeRFC2047Maybe(m["brewery"]),
-		BreweryCountry: decodeRFC2047Maybe(m["brewery_country"]),
-		Comment:        decodeRFC2047Maybe(m["comment"]),
+		Beer:           decodeMetadataValue(m["beer"]),
+		Brewery:        decodeMetadataValue(m["brewery"]),
+		BreweryCountry: decodeMetadataValue(m["brewery_country"]),
+		Comment:        decodeMetadataValue(m["comment"]),
 		Rating:         m["rating"],
-		Venue:          decodeRFC2047Maybe(m["venue"]),
-		City:           decodeRFC2047Maybe(m["city"]),
-		State:          decodeRFC2047Maybe(m["state"]),
-		Country:        decodeRFC2047Maybe(m["country"]),
+		Venue:          decodeMetadataValue(m["venue"]),
+		City:           decodeMetadataValue(m["city"]),
+		State:          decodeMetadataValue(m["state"]),
+		Country:        decodeMetadataValue(m["country"]),
 		LatLng:         m["latlng"],
 		Date:           m["date"],
-		Style:          decodeRFC2047Maybe(m["style"]),
+		Style:          decodeMetadataValue(m["style"]),
 		ABV:            m["abv"],
 	}
 }

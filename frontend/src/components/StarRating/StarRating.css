@@ -1,6 +1,6 @@
 .star-rating {
   display: inline-flex;
-  font-size: 20px;
+  font-size: 15px;
   color: var(--color-star-rating);
   margin-right: 8px;
   line-height: 1;
@@ -43,6 +43,6 @@
 
 .heart {
   margin-left: 5px;
-  color: red;
+  color: #d66;
   line-height: 1;
 }
