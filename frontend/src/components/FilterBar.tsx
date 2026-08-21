@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import Select from 'react-select';
 import { Image } from '../types';
 import './FilterBar.css';
@@ -94,6 +94,19 @@ export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
     }
   };
 
+  // swipe up on the expanded mobile panel closes it; swipes inside an open
+  // dropdown menu are ignored so scrolling the option list stays usable
+  const touchStartY = useRef(0);
+  const onTouchStart = (e: TouchEvent) => {
+    touchStartY.current = e.changedTouches[0].screenY;
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    if ((e.target as Element).closest('.rs__menu')) return;
+    if (touchStartY.current - e.changedTouches[0].screenY > 50) {
+      setOpen(false);
+    }
+  };
+
   const activeCount = Object.values(filters).filter(Boolean).length;
 
   return (
@@ -105,7 +118,7 @@ export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
       >
         Filters{activeCount > 0 ? ` (${activeCount})` : ''} {open ? '▴' : '▾'}
       </button>
-      <div class="filter-controls">
+      <div class="filter-controls" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {searchFields.map(({ key, label, options }) => (
           <Select
             key={key}

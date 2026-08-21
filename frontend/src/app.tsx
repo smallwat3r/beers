@@ -31,6 +31,7 @@ export function App() {
       beers: uniq((img) => img.metadata.beer),
       breweries: uniq((img) => img.metadata.brewery),
       styles: uniq((img) => img.metadata.style),
+      cities: uniq((img) => img.metadata.city),
       countries: uniq((img) => img.metadata.country),
     };
   }, [visible]);
@@ -105,7 +106,7 @@ export function App() {
       {!isLoading && visible.length > 0 && (
         <p class="stats">
           {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
-          {stats.styles} styles · {stats.countries} countries
+          {stats.styles} styles · {stats.cities} cities · {stats.countries} countries
         </p>
       )}
       <ImageGrid images={rendered} isLoading={isLoading} onImageClick={openModal} />
