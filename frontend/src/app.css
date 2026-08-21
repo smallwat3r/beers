@@ -5,6 +5,11 @@
   align-items: center;
 }
 
+.no-results {
+  color: var(--color-text-muted);
+  padding: 20px;
+}
+
 .error-banner {
   position: fixed;
   bottom: 1rem;
@@ -26,4 +31,13 @@
   padding: 0.25rem 0.75rem;
   border-radius: 4px;
   cursor: pointer;
+}
+.stats {
+  max-width: 1200px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 12px 0 0;
+  padding: 0 20px;
+  font-size: 0.85em;
+  color: var(--color-text-muted);
 }

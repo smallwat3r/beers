@@ -23,5 +23,4 @@ export type Image = {
 
 export type ImageResponse = {
   images: Image[];
-  has_more: boolean;
 };

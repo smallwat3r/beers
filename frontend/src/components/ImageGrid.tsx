@@ -5,17 +5,16 @@ import './ImageGrid.css';
 type ImageGridProps = {
   images: ImageType[];
   isLoading: boolean;
-  hasMore: boolean;
   onImageClick: (image: ImageType) => void;
 };
 
-export const ImageGrid = ({ images, isLoading, hasMore, onImageClick }: ImageGridProps) => {
+export const ImageGrid = ({ images, isLoading, onImageClick }: ImageGridProps) => {
   return (
     <div class="image-grid">
       {images.map((image) => (
         <ImageCard key={image.url} image={image} onClick={onImageClick} />
       ))}
-      {isLoading && hasMore && (
+      {isLoading && (
         <div class="image-card loader">Loading...</div>
       )}
     </div>

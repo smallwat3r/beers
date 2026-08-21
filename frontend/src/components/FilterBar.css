@@ -1,0 +1,177 @@
+.filter-bar {
+  position: sticky;
+  top: 0;
+  /* above the cards, below the modal (z-index 1000+) */
+  z-index: 100;
+  background-color: var(--color-bg-dark);
+  border-bottom: 1px solid var(--color-border);
+  padding: 10px 20px;
+  max-width: 1200px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-toggle {
+  display: none;
+}
+
+.filter-select {
+  font-size: 0.85em;
+  min-width: 10em;
+}
+
+.filter-select.rating {
+  min-width: 7.5em;
+}
+
+/* restyle react-select with the app's palette; .filter-bar prefix outweighs
+   the library's injected single-class styles */
+.filter-bar .rs__control {
+  background-color: transparent;
+  border-color: var(--color-border);
+  border-radius: 3px;
+  min-height: 2.2em;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.filter-bar .rs__control:hover,
+.filter-bar .rs__control--is-focused {
+  border-color: var(--color-text-muted);
+}
+
+.filter-bar .rs__value-container {
+  padding: 0 8px;
+}
+
+.filter-bar .rs__single-value,
+.filter-bar .rs__input-container {
+  color: inherit;
+}
+
+.filter-bar .rs__placeholder {
+  color: var(--color-text-muted);
+}
+
+.filter-bar .rs__indicator-separator {
+  display: none;
+}
+
+.filter-bar .rs__indicator {
+  padding: 4px;
+  color: var(--color-text-muted);
+}
+
+.filter-bar .rs__indicator:hover {
+  color: inherit;
+}
+
+.filter-bar .rs__menu {
+  background-color: var(--color-bg-dark);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  box-shadow: 0 4px 16px var(--color-shadow);
+  overflow: hidden;
+  z-index: 110;
+}
+
+.filter-bar .rs__option {
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.filter-bar .rs__option--is-focused {
+  background-color: rgba(128, 128, 128, 0.18);
+  color: inherit;
+}
+
+.filter-bar .rs__option--is-selected {
+  background-color: rgba(128, 128, 128, 0.32);
+  color: inherit;
+  font-weight: 500;
+}
+
+.filter-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+}
+
+.filter-bar input[type='date'] {
+  font-family: inherit;
+  font-size: 0.85em;
+  padding: 0.35em 0.5em;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+  background-color: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.filter-bar input[type='date']:hover,
+.filter-bar input[type='date']:focus {
+  border-color: var(--color-text-muted);
+  outline: none;
+}
+
+.filter-bar input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.filter-bar button {
+  font-size: 0.85em;
+  font-weight: 400;
+  padding: 0.35em 0.8em;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: inherit;
+}
+
+.filter-bar button:hover {
+  border-color: var(--color-text-muted);
+}
+
+@media (max-width: 767px) {
+  .filter-toggle {
+    display: inline-block;
+  }
+  .filter-controls {
+    display: none;
+    padding-top: 10px;
+  }
+  .filter-bar.open .filter-controls {
+    display: flex;
+  }
+  .filter-select,
+  .filter-range {
+    width: 100%;
+  }
+  .filter-select.rating {
+    flex: 1;
+  }
+  .filter-range input[type='date'] {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .filter-bar {
+    background-color: var(--color-bg-light);
+  }
+  .filter-bar .rs__menu {
+    background-color: var(--color-bg-light);
+  }
+}

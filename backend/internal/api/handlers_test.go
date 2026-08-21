@@ -4,43 +4,61 @@ import (
 	"beers/backend/internal/config"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
-	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type MockS3Client struct {
-	ListObjectsV2Func func(
+	GetObjectFunc func(
 		ctx context.Context,
-		params *s3.ListObjectsV2Input,
+		params *s3.GetObjectInput,
 		optFns ...func(*s3.Options),
-	) (*s3.ListObjectsV2Output, error)
-	HeadObjectFunc func(
-		ctx context.Context,
-		params *s3.HeadObjectInput,
-		optFns ...func(*s3.Options),
-	) (*s3.HeadObjectOutput, error)
+	) (*s3.GetObjectOutput, error)
 }
 
-func (m *MockS3Client) ListObjectsV2(
+func (m *MockS3Client) GetObject(
 	ctx context.Context,
-	params *s3.ListObjectsV2Input,
+	params *s3.GetObjectInput,
 	optFns ...func(*s3.Options),
-) (*s3.ListObjectsV2Output, error) {
-	return m.ListObjectsV2Func(ctx, params, optFns...)
+) (*s3.GetObjectOutput, error) {
+	return m.GetObjectFunc(ctx, params, optFns...)
 }
 
-func (m *MockS3Client) HeadObject(
-	ctx context.Context,
-	params *s3.HeadObjectInput,
-	optFns ...func(*s3.Options),
-) (*s3.HeadObjectOutput, error) {
-	return m.HeadObjectFunc(ctx, params, optFns...)
+const testManifest = `[
+	{
+		"key": "2025/11/08/WEBP/image1.webp",
+		"id": "123",
+		"beer": "Test Beer",
+		"brewery": "Brasserie de l'Être",
+		"date": "Sat, 08 Nov 2025 12:00:00 +0000"
+	},
+	{
+		"key": "2025/11/07/WEBP/image2.webp",
+		"id": "124",
+		"beer": "Other Beer",
+		"date": "Fri, 07 Nov 2025 12:00:00 +0000"
+	}
+]`
+
+func manifestClient(t *testing.T, body string) *MockS3Client {
+	return &MockS3Client{
+		GetObjectFunc: func(
+			ctx context.Context,
+			params *s3.GetObjectInput,
+			optFns ...func(*s3.Options),
+		) (*s3.GetObjectOutput, error) {
+			if got, want := *params.Key, "index.json"; got != want {
+				t.Errorf("Key = %q, want %q", got, want)
+			}
+			return &s3.GetObjectOutput{Body: io.NopCloser(strings.NewReader(body))}, nil
+		},
+	}
 }
 
 func TestGetImages(t *testing.T) {
@@ -49,45 +67,10 @@ func TestGetImages(t *testing.T) {
 		PublicURL:  "https://test.com",
 	}
 
-	mockClient := &MockS3Client{
-		ListObjectsV2Func: func(
-			ctx context.Context,
-			params *s3.ListObjectsV2Input,
-			optFns ...func(*s3.Options),
-		) (*s3.ListObjectsV2Output, error) {
-			return &s3.ListObjectsV2Output{
-				Contents: []types.Object{
-					// image1 is the newest checkin but listed last, so the
-					// response order below proves the date sort ran
-					{Key: aws.String("2025/11/08/WEBP/image2.webp")},
-					{Key: aws.String("2025/11/08/WEBP/image1.webp")},
-				},
-			}, nil
-		},
-		HeadObjectFunc: func(
-			ctx context.Context,
-			params *s3.HeadObjectInput,
-			optFns ...func(*s3.Options),
-		) (*s3.HeadObjectOutput, error) {
-			date := "Fri, 07 Nov 2025 12:00:00 +0000"
-			if *params.Key == "2025/11/08/WEBP/image1.webp" {
-				date = "Sat, 08 Nov 2025 12:00:00 +0000"
-			}
-			return &s3.HeadObjectOutput{
-				Metadata: map[string]string{
-					"id":   "123",
-					"beer": "Test Beer",
-					"date": date,
-				},
-			}, nil
-		},
-	}
-
-	handler := GetImages(mockClient, cfg)
+	handler := GetImages(manifestClient(t, testManifest), cfg)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
-
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -113,115 +96,58 @@ func TestGetImages(t *testing.T) {
 	if img.Metadata.Beer != "Test Beer" {
 		t.Errorf("expected Beer %q, got %q", "Test Beer", img.Metadata.Beer)
 	}
-}
-
-func TestDecodeRFC2047Maybe(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "no encoding",
-			input:    "Hello World",
-			expected: "Hello World",
-		},
-		{
-			name:     "rfc2047 encoding",
-			input:    "=?UTF-8?Q?Hello_=E2=82=AC_World?=",
-			expected: "Hello € World",
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := decodeRFC2047Maybe(tt.input); got != tt.expected {
-				t.Errorf(
-					"decodeRFC2047Maybe() = %v, want %v",
-					got,
-					tt.expected,
-				)
-			}
-		})
+	if img.Metadata.Brewery != "Brasserie de l'Être" {
+		t.Errorf("unexpected Brewery: %q", img.Metadata.Brewery)
 	}
 }
 
-func TestDecodeMetadataValue(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "plain text",
-			input:    "Hello World",
-			expected: "Hello World",
-		},
-		{
-			name:     "percent encoded",
-			input:    "Probably one of the best NA beer I%E2%80%99ve had!",
-			expected: "Probably one of the best NA beer I’ve had!",
-		},
-		{
-			name:     "rfc2047 encoded",
-			input:    "=?UTF-8?Q?Hello_=E2=82=AC_World?=",
-			expected: "Hello € World",
-		},
-		{
-			name:     "literal percent kept as is",
-			input:    "Would drink 100% again",
-			expected: "Would drink 100% again",
+func TestGetImagesCachesManifest(t *testing.T) {
+	cfg := &config.AppConfig{BucketName: "b", PublicURL: "https://test.com"}
+
+	calls := 0
+	client := &MockS3Client{
+		GetObjectFunc: func(
+			ctx context.Context,
+			params *s3.GetObjectInput,
+			optFns ...func(*s3.Options),
+		) (*s3.GetObjectOutput, error) {
+			calls++
+			return &s3.GetObjectOutput{Body: io.NopCloser(strings.NewReader(testManifest))}, nil
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := decodeMetadataValue(tt.input); got != tt.expected {
-				t.Errorf("decodeMetadataValue() = %q, want %q", got, tt.expected)
-			}
-		})
+	handler := GetImages(client, cfg)
+	for i := 0; i < 3; i++ {
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("request %d: status = %v", i, rr.Code)
+		}
+	}
+
+	if calls != 1 {
+		t.Errorf("expected 1 manifest fetch across requests, got %d", calls)
 	}
 }
 
-func TestParseMonthFromLastKey(t *testing.T) {
-	tests := []struct {
-		name      string
-		lastKey   string
-		expected  time.Time
-		expectErr bool
-	}{
-		{
-			name:      "valid lastKey",
-			lastKey:   "2025/11/08/WEBP/image.webp",
-			expected:  time.Date(2025, time.November, 1, 0, 0, 0, 0, time.UTC),
-			expectErr: false,
-		},
-		{
-			name:      "invalid lastKey",
-			lastKey:   "2025-11-08-webp-image.webp",
-			expectErr: true,
-		},
-		{
-			name:      "empty lastKey",
-			lastKey:   "",
-			expectErr: true,
+func TestGetImagesErrorWithoutCache(t *testing.T) {
+	cfg := &config.AppConfig{BucketName: "b", PublicURL: "https://test.com"}
+
+	client := &MockS3Client{
+		GetObjectFunc: func(
+			ctx context.Context,
+			params *s3.GetObjectInput,
+			optFns ...func(*s3.Options),
+		) (*s3.GetObjectOutput, error) {
+			return nil, errors.New("boom")
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseMonthFromLastKey(tt.lastKey)
-			if (err != nil) != tt.expectErr {
-				t.Fatalf("parseMonthFromLastKey() error = %v, expectErr %v", err, tt.expectErr)
-			}
-			if !tt.expectErr && !got.Equal(tt.expected) {
-				t.Errorf("parseMonthFromLastKey() = %v, want %v", got, tt.expected)
-			}
-		})
+	handler := GetImages(client, cfg)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %v, want %v", rr.Code, http.StatusInternalServerError)
 	}
 }

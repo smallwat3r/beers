@@ -4,6 +4,7 @@ import (
 	"beers/backend/internal/config"
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -12,17 +13,11 @@ import (
 )
 
 type S3Client interface {
-	ListObjectsV2(
+	GetObject(
 		ctx context.Context,
-		params *s3.ListObjectsV2Input,
+		params *s3.GetObjectInput,
 		optFns ...func(*s3.Options),
-	) (*s3.ListObjectsV2Output, error)
-
-	HeadObject(
-		ctx context.Context,
-		params *s3.HeadObjectInput,
-		optFns ...func(*s3.Options),
-	) (*s3.HeadObjectOutput, error)
+	) (*s3.GetObjectOutput, error)
 }
 
 func NewS3Client(ctx context.Context, cfg *config.AppConfig) (*s3.Client, error) {
@@ -43,33 +38,18 @@ func NewS3Client(ctx context.Context, cfg *config.AppConfig) (*s3.Client, error)
 	}), nil
 }
 
-func ListObjects(
-	ctx context.Context,
-	client S3Client,
-	bucketName, prefix, continuationToken string,
-) (*s3.ListObjectsV2Output, error) {
-	input := &s3.ListObjectsV2Input{
-		Bucket:  aws.String(bucketName),
-		MaxKeys: aws.Int32(1000), // fetch more objects to sort by month
-		Prefix:  aws.String(prefix),
-	}
-
-	if continuationToken != "" {
-		input.ContinuationToken = aws.String(continuationToken)
-	}
-
-	return client.ListObjectsV2(ctx, input)
-}
-
-func GetObjectMetadata(
+// GetObject returns the object's body; the caller must close it.
+func GetObject(
 	ctx context.Context,
 	client S3Client,
 	bucketName, objectKey string,
-) (*s3.HeadObjectOutput, error) {
-	input := &s3.HeadObjectInput{
+) (io.ReadCloser, error) {
+	out, err := client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectKey),
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	return client.HeadObject(ctx, input)
+	return out.Body, nil
 }

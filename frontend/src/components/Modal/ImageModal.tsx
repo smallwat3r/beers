@@ -6,7 +6,6 @@ import './ImageModal.css';
 
 type ImageModalProps = {
   image: ImageType;
-  loadingNext: boolean;
   onClose: () => void;
   onNext: () => void;
   onPrevious: () => void;
@@ -14,7 +13,7 @@ type ImageModalProps = {
   showNext: boolean;
 };
 
-export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, showPrevious, showNext }: ImageModalProps) => {
+export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, showNext }: ImageModalProps) => {
   const touchStartX = useRef(0);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -88,9 +87,7 @@ export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, sh
           class="next-button"
           aria-label="Next image"
           onClick={(e) => { e.stopPropagation(); onNext(); }}
-        >
-          {loadingNext ? <div class="loader"></div> : <span>&#10095;</span>}
-        </button>
+        ><span>&#10095;</span></button>
       )}
       <div
         class="modal-content"

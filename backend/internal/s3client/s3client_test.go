@@ -2,6 +2,8 @@ package s3client
 
 import (
 	"context"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -9,99 +11,52 @@ import (
 )
 
 type MockS3Client struct {
-	ListObjectsV2Func func(
+	GetObjectFunc func(
 		ctx context.Context,
-		params *s3.ListObjectsV2Input,
+		params *s3.GetObjectInput,
 		optFns ...func(*s3.Options),
-	) (*s3.ListObjectsV2Output, error)
-	HeadObjectFunc func(
-		ctx context.Context,
-		params *s3.HeadObjectInput,
-		optFns ...func(*s3.Options),
-	) (*s3.HeadObjectOutput, error)
+	) (*s3.GetObjectOutput, error)
 }
 
-func (m *MockS3Client) ListObjectsV2(
+func (m *MockS3Client) GetObject(
 	ctx context.Context,
-	params *s3.ListObjectsV2Input,
+	params *s3.GetObjectInput,
 	optFns ...func(*s3.Options),
-) (*s3.ListObjectsV2Output, error) {
-	if m.ListObjectsV2Func == nil {
-		panic("ListObjectsV2Func not set on MockS3Client")
+) (*s3.GetObjectOutput, error) {
+	if m.GetObjectFunc == nil {
+		panic("GetObjectFunc not set on MockS3Client")
 	}
-	return m.ListObjectsV2Func(ctx, params, optFns...)
+	return m.GetObjectFunc(ctx, params, optFns...)
 }
 
-func (m *MockS3Client) HeadObject(
-	ctx context.Context,
-	params *s3.HeadObjectInput,
-	optFns ...func(*s3.Options),
-) (*s3.HeadObjectOutput, error) {
-	if m.HeadObjectFunc == nil {
-		panic("HeadObjectFunc not set on MockS3Client")
-	}
-	return m.HeadObjectFunc(ctx, params, optFns...)
-}
-
-func TestListObjects(t *testing.T) {
+func TestGetObject(t *testing.T) {
 	mockClient := &MockS3Client{
-		ListObjectsV2Func: func(
+		GetObjectFunc: func(
 			ctx context.Context,
-			params *s3.ListObjectsV2Input,
+			params *s3.GetObjectInput,
 			optFns ...func(*s3.Options),
-		) (*s3.ListObjectsV2Output, error) {
-			if got, want := aws.ToString(params.Bucket), "test-bucket"; got != want {
-				t.Errorf("Bucket = %q, want %q", got, want)
-			}
-			if got, want := aws.ToString(params.Prefix), "test-prefix"; got != want {
-				t.Errorf("Prefix = %q, want %q", got, want)
-			}
-			if got, want := aws.ToInt32(params.MaxKeys), int32(1000); got != want {
-				t.Errorf("MaxKeys = %d, want %d", got, want)
-			}
-			if params.ContinuationToken != nil {
-				t.Errorf("ContinuationToken = %q, want nil", aws.ToString(params.ContinuationToken))
-			}
-			return &s3.ListObjectsV2Output{}, nil
-		},
-	}
-
-	_, err := ListObjects(
-		context.Background(),
-		mockClient,
-		"test-bucket",
-		"test-prefix",
-		"",
-	)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestGetObjectMetadata(t *testing.T) {
-	mockClient := &MockS3Client{
-		HeadObjectFunc: func(
-			ctx context.Context,
-			params *s3.HeadObjectInput,
-			optFns ...func(*s3.Options),
-		) (*s3.HeadObjectOutput, error) {
+		) (*s3.GetObjectOutput, error) {
 			if got, want := aws.ToString(params.Bucket), "test-bucket"; got != want {
 				t.Errorf("Bucket = %q, want %q", got, want)
 			}
 			if got, want := aws.ToString(params.Key), "test-key"; got != want {
 				t.Errorf("Key = %q, want %q", got, want)
 			}
-			return &s3.HeadObjectOutput{}, nil
+			return &s3.GetObjectOutput{Body: io.NopCloser(strings.NewReader("data"))}, nil
 		},
 	}
 
-	_, err := GetObjectMetadata(
-		context.Background(),
-		mockClient,
-		"test-bucket",
-		"test-key",
-	)
+	body, err := GetObject(context.Background(), mockClient, "test-bucket", "test-key")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	defer body.Close()
+
+	data, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("read error: %v", err)
+	}
+	if string(data) != "data" {
+		t.Errorf("body = %q, want %q", data, "data")
 	}
 }
