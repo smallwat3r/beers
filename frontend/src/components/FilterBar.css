@@ -102,8 +102,21 @@
 .filter-range {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   color: var(--color-text-muted);
+}
+
+.filter-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+}
+
+/* iOS collapses an empty date input to near-zero width; keep a usable size */
+.filter-bar input[type='date'] {
+  min-width: 7.5em;
+  min-height: 1.9em;
 }
 
 .filter-bar input[type='date'] {
@@ -168,6 +181,10 @@
   }
   .filter-select.rating {
     flex: 1;
+  }
+  .filter-date {
+    flex: 1;
+    font-size: 1em;
   }
   .filter-range input[type='date'] {
     flex: 1;

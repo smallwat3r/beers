@@ -120,21 +120,26 @@ export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
           />
         ))}
         <span class="filter-range">
-          <input
-            type="date"
-            aria-label="From date"
-            onClick={openPicker}
-            value={filters.dateFrom}
-            onChange={(e) => setField('dateFrom', (e.target as HTMLInputElement).value)}
-          />
-          <span aria-hidden="true">-</span>
-          <input
-            type="date"
-            aria-label="To date"
-            onClick={openPicker}
-            value={filters.dateTo}
-            onChange={(e) => setField('dateTo', (e.target as HTMLInputElement).value)}
-          />
+          {/* visible labels: iOS renders an empty date input as blank text,
+              so without these the fields are invisible until focused */}
+          <label class="filter-date">
+            <span>From</span>
+            <input
+              type="date"
+              onClick={openPicker}
+              value={filters.dateFrom}
+              onChange={(e) => setField('dateFrom', (e.target as HTMLInputElement).value)}
+            />
+          </label>
+          <label class="filter-date">
+            <span>To</span>
+            <input
+              type="date"
+              onClick={openPicker}
+              value={filters.dateTo}
+              onChange={(e) => setField('dateTo', (e.target as HTMLInputElement).value)}
+            />
+          </label>
         </span>
         <span class="filter-range">
           <Select
