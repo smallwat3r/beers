@@ -144,6 +144,14 @@
 }
 
 @media (max-width: 767px) {
+  /* iOS Safari auto-zooms into focused inputs whose font size is below 16px,
+     so every control stays at 1em (16px) on small screens */
+  .filter-select,
+  .filter-bar input[type='date'],
+  .filter-bar button {
+    font-size: 1em;
+  }
+
   .filter-toggle {
     display: inline-block;
   }

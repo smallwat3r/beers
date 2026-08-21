@@ -30,6 +30,7 @@ export function App() {
       checkins: visible.length,
       beers: uniq((img) => img.metadata.beer),
       breweries: uniq((img) => img.metadata.brewery),
+      styles: uniq((img) => img.metadata.style),
       countries: uniq((img) => img.metadata.country),
     };
   }, [visible]);
@@ -104,7 +105,7 @@ export function App() {
       {!isLoading && visible.length > 0 && (
         <p class="stats">
           {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
-          {stats.countries} countries
+          {stats.styles} styles · {stats.countries} countries
         </p>
       )}
       <ImageGrid images={rendered} isLoading={isLoading} onImageClick={openModal} />

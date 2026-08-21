@@ -8,6 +8,7 @@ export type Filters = {
   brewery: string;
   style: string;
   country: string;
+  city: string;
   dateFrom: string;
   dateTo: string;
   ratingMin: string;
@@ -18,6 +19,7 @@ export const emptyFilters: Filters = {
   brewery: '',
   style: '',
   country: '',
+  city: '',
   dateFrom: '',
   dateTo: '',
   ratingMin: '',
@@ -41,6 +43,7 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
     (!f.brewery || img.metadata.brewery === f.brewery) &&
     (!f.style || img.metadata.style === f.style) &&
     (!f.country || img.metadata.country === f.country) &&
+    (!f.city || img.metadata.city === f.city) &&
     (!f.dateFrom || (day !== '' && day >= f.dateFrom)) &&
     (!f.dateTo || (day !== '' && day <= f.dateTo)) &&
     (!f.ratingMin || rating >= parseFloat(f.ratingMin)) &&
@@ -72,6 +75,7 @@ export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
     { key: 'brewery', label: 'Brewery', options: uniqSorted(images.map((i) => i.metadata.brewery)) },
     { key: 'style', label: 'Style', options: uniqSorted(images.map((i) => i.metadata.style)) },
     { key: 'country', label: 'Country', options: uniqSorted(images.map((i) => i.metadata.country)) },
+    { key: 'city', label: 'City', options: uniqSorted(images.map((i) => i.metadata.city)) },
   ];
 
   const setField = (key: keyof Filters, value: string) =>
