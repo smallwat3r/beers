@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import './app.css';
 import { FilterBar, Filters, emptyFilters, matchesFilters } from './components/FilterBar';
 import { ImageGrid } from './components/ImageGrid';
+import { ImageList } from './components/ImageList';
 import { ImageModal } from './components/Modal/ImageModal';
 import { useImages } from './hooks/useImages';
 import { Image as ImageType } from './types';
@@ -16,6 +17,15 @@ export function App() {
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [renderCount, setRenderCount] = useState(PAGE_SIZE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [view, setView] = useState<'grid' | 'list'>(
+    () => (localStorage.getItem('beers-view') === 'list' ? 'list' : 'grid'),
+  );
+
+  const changeView = (v: 'grid' | 'list') => {
+    setView(v);
+    localStorage.setItem('beers-view', v);
+  };
 
   const visible = useMemo(
     () => images.filter((img) => matchesFilters(img, filters)),
@@ -40,6 +50,8 @@ export function App() {
 
   // start the window over when filters change so the grid begins at the top
   // of the new result set
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
   const changeFilters = (f: Filters) => {
     setFilters(f);
     setRenderCount(PAGE_SIZE);
@@ -102,14 +114,56 @@ export function App() {
 
   return (
     <div class="app">
-      <FilterBar images={images} filters={filters} onChange={changeFilters} />
-      {!isLoading && visible.length > 0 && (
-        <p class="stats">
-          {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
-          {stats.styles} styles · {stats.cities} cities · {stats.countries} countries
-        </p>
+      <div class="top-bar">
+        <div class="toolbar">
+          {!isLoading && visible.length > 0 ? (
+            <p class="stats">
+              {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
+              {stats.styles} styles · {stats.cities} cities · {stats.countries} countries
+            </p>
+          ) : (
+            <span />
+          )}
+          <div class="toolbar-actions">
+            <button
+              class="filter-toggle"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}{' '}
+              {filtersOpen ? '▴' : '▾'}
+            </button>
+            <div class="view-toggle" role="group" aria-label="View">
+              <button
+                class={view === 'grid' ? 'active' : ''}
+                aria-pressed={view === 'grid'}
+                onClick={() => changeView('grid')}
+              >
+                Grid
+              </button>
+              <button
+                class={view === 'list' ? 'active' : ''}
+                aria-pressed={view === 'list'}
+                onClick={() => changeView('list')}
+              >
+                List
+              </button>
+            </div>
+          </div>
+        </div>
+        <FilterBar
+          images={images}
+          filters={filters}
+          open={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          onChange={changeFilters}
+        />
+      </div>
+      {view === 'grid' ? (
+        <ImageGrid images={rendered} isLoading={isLoading} onImageClick={openModal} />
+      ) : (
+        <ImageList images={rendered} isLoading={isLoading} onImageClick={openModal} />
       )}
-      <ImageGrid images={rendered} isLoading={isLoading} onImageClick={openModal} />
       {visible.length === 0 && !isLoading && !error && (
         <p class="no-results">No matching beers.</p>
       )}

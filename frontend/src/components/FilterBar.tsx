@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useRef, useState } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import Select from 'react-select';
 import { Image } from '../types';
 import './FilterBar.css';
@@ -64,16 +64,30 @@ const toValue = (v: string): Option | null => (v ? { value: v, label: v } : null
 type FilterBarProps = {
   images: Image[];
   filters: Filters;
+  open: boolean;
+  onClose: () => void;
   onChange: (filters: Filters) => void;
 };
 
-export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
-  // on small screens the controls collapse behind this toggle
-  const [open, setOpen] = useState(false);
-
-  const searchFields: { key: keyof Filters; label: string; options: string[] }[] = [
-    { key: 'brewery', label: 'Brewery', options: uniqSorted(images.map((i) => i.metadata.brewery)) },
-    { key: 'style', label: 'Style', options: uniqSorted(images.map((i) => i.metadata.style)) },
+export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBarProps) => {
+  const searchFields: {
+    key: keyof Filters;
+    label: string;
+    options: string[];
+    wide?: boolean;
+  }[] = [
+    {
+      key: 'brewery',
+      label: 'Brewery',
+      options: uniqSorted(images.map((i) => i.metadata.brewery)),
+      wide: true,
+    },
+    {
+      key: 'style',
+      label: 'Style',
+      options: uniqSorted(images.map((i) => i.metadata.style)),
+      wide: true,
+    },
     { key: 'country', label: 'Country', options: uniqSorted(images.map((i) => i.metadata.country)) },
     { key: 'city', label: 'City', options: uniqSorted(images.map((i) => i.metadata.city)) },
   ];
@@ -103,26 +117,17 @@ export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
   const onTouchEnd = (e: TouchEvent) => {
     if ((e.target as Element).closest('.rs__menu')) return;
     if (touchStartY.current - e.changedTouches[0].screenY > 50) {
-      setOpen(false);
+      onClose();
     }
   };
 
-  const activeCount = Object.values(filters).filter(Boolean).length;
-
   return (
     <div class={`filter-bar ${open ? 'open' : ''}`}>
-      <button
-        class="filter-toggle"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        Filters{activeCount > 0 ? ` (${activeCount})` : ''} {open ? '▴' : '▾'}
-      </button>
       <div class="filter-controls" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {searchFields.map(({ key, label, options }) => (
+        {searchFields.map(({ key, label, options, wide }) => (
           <Select
             key={key}
-            className="filter-select"
+            className={`filter-select${wide ? ' wide' : ''}`}
             classNamePrefix="rs"
             placeholder={label}
             aria-label={label}
@@ -179,7 +184,7 @@ export const FilterBar = ({ images, filters, onChange }: FilterBarProps) => {
             onChange={(opt) => setField('ratingMax', opt?.value ?? '')}
           />
         </span>
-        {activeCount > 0 && (
+        {Object.values(filters).some(Boolean) && (
           <button class="filter-clear" onClick={() => onChange(emptyFilters)}>
             Clear
           </button>

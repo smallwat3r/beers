@@ -1,30 +1,29 @@
 .filter-bar {
-  position: sticky;
-  top: 0;
-  /* above the cards, below the modal (z-index 1000+) */
-  z-index: 100;
-  background-color: var(--color-bg-dark);
-  border-bottom: 1px solid var(--color-border);
-  padding: 10px 20px;
-  max-width: 1200px;
+  padding: 0 20px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .filter-controls {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  padding-bottom: 10px;
 }
 
-.filter-toggle {
-  display: none;
+.filter-bar.open .filter-controls {
+  display: flex;
 }
 
 .filter-select {
   font-size: 0.85em;
   min-width: 10em;
+}
+
+/* brewery and style names run long, give their boxes more room */
+.filter-select.wide {
+  min-width: 16em;
 }
 
 .filter-select.rating {
@@ -165,16 +164,6 @@
     font-size: 1em;
   }
 
-  .filter-toggle {
-    display: inline-block;
-  }
-  .filter-controls {
-    display: none;
-    padding-top: 10px;
-  }
-  .filter-bar.open .filter-controls {
-    display: flex;
-  }
   .filter-select,
   .filter-range {
     width: 100%;
@@ -193,9 +182,6 @@
 }
 
 @media (prefers-color-scheme: light) {
-  .filter-bar {
-    background-color: var(--color-bg-light);
-  }
   .filter-bar .rs__menu {
     background-color: var(--color-bg-light);
   }
