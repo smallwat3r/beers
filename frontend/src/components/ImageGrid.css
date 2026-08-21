@@ -5,6 +5,9 @@
   padding: 20px;
   max-width: 1200px;
   width: 100%;
+  /* keep the padding inside the 100% width so the grid never overflows the
+     viewport; the app container no longer shrink-fits it */
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
