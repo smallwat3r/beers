@@ -12,9 +12,10 @@ R2_SECRET_ACCESS_KEY="your_r2_secret_access_key"
 R2_PUBLIC_URL="your_r2_public_url"
 ```
 
-The per-client rate limiter trusts the `X-Forwarded-For` / `X-Real-IP` headers to
-identify callers, so the app must only be reachable through a trusted proxy (e.g.
-Cloudflare). If exposed directly, those headers can be spoofed to evade or forge
+The per-client rate limiter identifies callers by `CF-Connecting-IP` (set by
+Cloudflare), falling back to the last `X-Forwarded-For` entry and then the
+transport address. The app must only be reachable through a trusted proxy (e.g.
+Cloudflare), if exposed directly those headers can be spoofed to evade or forge
 the limit.
 
 ![beers.png](./img/beers.png)

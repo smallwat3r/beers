@@ -135,6 +135,29 @@ func findFirstMonthWithImages(
 	return nil, time.Time{}, nil
 }
 
+// monthHasImages reports whether the month prefix contains any WEBP object,
+// returning at the first page that has one instead of draining the listing.
+func monthHasImages(
+	ctx context.Context,
+	client s3client.S3Client,
+	bucket, prefix string,
+) (bool, error) {
+	token := ""
+	for {
+		out, err := s3client.ListObjects(ctx, client, bucket, prefix, token)
+		if err != nil {
+			return false, err
+		}
+		if len(filterWebpObjects(out.Contents)) > 0 {
+			return true, nil
+		}
+		if out.IsTruncated == nil || !*out.IsTruncated || out.NextContinuationToken == nil {
+			return false, nil
+		}
+		token = *out.NextContinuationToken
+	}
+}
+
 // hasOlderMonth reports whether any month within maxBack months before start
 // contains WEBP images, mirroring the load definition so has_more never promises
 // a page that resolves to empty.
@@ -145,11 +168,24 @@ func hasOlderMonth(
 	start time.Time,
 	maxBack int,
 ) (bool, error) {
-	objects, _, err := findFirstMonthWithImages(ctx, client, bucket, start, maxBack)
-	if err != nil {
-		return false, err
+	cur := start
+	for i := 0; i < maxBack; i++ {
+		ok, err := monthHasImages(ctx, client, bucket, monthPrefix(cur))
+		if err != nil {
+			return false, fmt.Errorf("probe %s: %w", monthPrefix(cur), err)
+		}
+		if ok {
+			return true, nil
+		}
+		cur = cur.AddDate(0, -1, 0)
 	}
-	return len(objects) > 0, nil
+	return false, nil
+}
+
+func writeJSONError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
 func newCheckinMetadata(m map[string]string) CheckinMetadata {
@@ -226,8 +262,7 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 		} else {
 			t, err := parseMonthFromLastKey(lastKey)
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]string{"error": "Invalid lastKey format"})
+				writeJSONError(w, http.StatusBadRequest, "Invalid lastKey format")
 				return
 			}
 			// start from the previous month so we don't repeat the current one
@@ -240,12 +275,14 @@ func GetImages(client s3client.S3Client, cfg *config.AppConfig) http.HandlerFunc
 			client,
 			cfg.BucketName,
 			startFrom,
-			12, // check up to 12 months back
+			// Check up to 12 months back. This is also a deliberate ceiling:
+			// a gap of more than 12 consecutive empty months ends pagination
+			// for good, which is acceptable for this journal.
+			12,
 		)
 		if err != nil {
 			log.Printf("find month error: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Error listing objects"})
+			writeJSONError(w, http.StatusInternalServerError, "Error listing objects")
 			return
 		}
 		if len(keys) == 0 {

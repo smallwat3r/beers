@@ -7,7 +7,7 @@ import { useImages } from './hooks/useImages';
 import { Image as ImageType } from './types';
 
 export function App() {
-  const { images, isLoading, hasMore, loadImages } = useImages();
+  const { images, isLoading, hasMore, error, loadImages } = useImages();
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [shouldAdvance, setShouldAdvance] = useState(false);
 
@@ -57,6 +57,12 @@ export function App() {
   return (
     <div class="app">
       <ImageGrid images={images} isLoading={isLoading} hasMore={hasMore} onImageClick={openModal} />
+      {error && (
+        <div class="error-banner" role="alert">
+          <span>Could not load images.</span>
+          <button onClick={loadImages}>Retry</button>
+        </div>
+      )}
       {selectedImage && (
         <ImageModal
           image={selectedImage}

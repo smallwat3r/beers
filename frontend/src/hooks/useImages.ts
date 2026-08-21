@@ -8,8 +8,8 @@ export const useImages = () => {
   const [error, setError] = useState<Error | null>(null);
   const [lastKey, setLastKey] = useState<string>('');
 
-  const stateRef = useRef({ isLoading, hasMore, lastKey });
-  stateRef.current = { isLoading, hasMore, lastKey };
+  const stateRef = useRef({ isLoading, hasMore, lastKey, error });
+  stateRef.current = { isLoading, hasMore, lastKey, error };
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -76,7 +76,9 @@ export const useImages = () => {
         window.innerHeight + document.documentElement.scrollTop >=
         document.documentElement.offsetHeight - 500;
 
-      if (!nearBottom || stateRef.current.isLoading) return;
+      // after a failure only the explicit Retry button resumes loading, so a
+      // persistent error does not turn scrolling into a retry storm
+      if (!nearBottom || stateRef.current.isLoading || stateRef.current.error) return;
       loadImages();
     };
 
@@ -89,10 +91,10 @@ export const useImages = () => {
     const isPageShort =
       document.documentElement.scrollHeight <= window.innerHeight;
 
-    if (!isLoading && hasMore && isPageShort) {
+    if (!isLoading && hasMore && !error && isPageShort) {
       loadImages();
     }
-  }, [images, isLoading, hasMore, loadImages]);
+  }, [images, isLoading, hasMore, error, loadImages]);
 
   return { images, isLoading, hasMore, error, loadImages };
 };

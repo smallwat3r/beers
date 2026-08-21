@@ -1,4 +1,4 @@
-import { useState, useEffect, h, Fragment } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { Image as ImageType } from '../types';
 import './ImageCard.css';
 
@@ -25,10 +25,25 @@ export const ImageCard = ({ image, onClick }: { image: ImageType, onClick: (imag
     };
   }, [image.url]);
 
+  const open = () => onClick(image);
+
   return (
-    <div class="image-card" onClick={() => onClick(image)}>
+    <div
+      class="image-card"
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      }}
+    >
       <div class="image-container">
-        {isLoaded ? <img src={image.url} alt={image.key} /> : <div class="image-placeholder" />}
+        {isLoaded
+          ? <img src={image.url} alt={image.metadata.beer || image.key} />
+          : <div class="image-placeholder" />}
       </div>
     </div>
   );

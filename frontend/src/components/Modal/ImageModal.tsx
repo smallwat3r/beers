@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { Image as ImageType } from '../../types';
 import { StarRating } from '../StarRating/StarRating';
 import './ImageModal.css';
@@ -15,8 +15,8 @@ type ImageModalProps = {
 };
 
 export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, showPrevious, showNext }: ImageModalProps) => {
-  const [touchStartX, setTouchStartX] = useState(0);
-  const [touchEndX, setTouchEndX] = useState(0);
+  const touchStartX = useRef(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const locationParts = [
     image.metadata.venue,
@@ -30,15 +30,22 @@ export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, sh
       onNext();
     } else if (e.key === 'ArrowLeft') {
       onPrevious();
+    } else if (e.key === 'Escape') {
+      onClose();
     }
   };
 
   const handleTouchStart = (e: TouchEvent) => {
-    setTouchStartX(e.changedTouches[0].screenX);
+    touchStartX.current = e.changedTouches[0].screenX;
   };
 
   const handleTouchEnd = (e: TouchEvent) => {
-    setTouchEndX(e.changedTouches[0].screenX);
+    const touchEndX = e.changedTouches[0].screenX;
+    if (touchStartX.current > touchEndX + 50) {
+      onNext();
+    } else if (touchStartX.current < touchEndX - 50) {
+      onPrevious();
+    }
   };
 
   useEffect(() => {
@@ -61,31 +68,41 @@ export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, sh
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onNext, onPrevious]);
+  }, [onNext, onPrevious, onClose]);
 
   useEffect(() => {
-    if (touchEndX === 0) return;
-
-    if (touchStartX > touchEndX + 50) {
-      onNext();
-    }
-
-    if (touchStartX < touchEndX - 50) {
-      onPrevious();
-    }
-  }, [touchEndX]);
+    dialogRef.current?.focus();
+  }, []);
 
   return (
     <div class="modal-overlay" onClick={onClose} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      {showPrevious && <button class="prev-button" onClick={(e) => { e.stopPropagation(); onPrevious(); }}>&#10094;</button>}
+      {showPrevious && (
+        <button
+          class="prev-button"
+          aria-label="Previous image"
+          onClick={(e) => { e.stopPropagation(); onPrevious(); }}
+        >&#10094;</button>
+      )}
       {showNext && (
-        <button class="next-button" onClick={(e) => { e.stopPropagation(); onNext(); }}>
+        <button
+          class="next-button"
+          aria-label="Next image"
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+        >
           {loadingNext ? <div class="loader"></div> : <span>&#10095;</span>}
         </button>
       )}
-      <div class="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button class="close-button" onClick={onClose}>&times;</button>
-        <img src={image.url} alt={image.key} />
+      <div
+        class="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-label={image.metadata.beer || 'Beer photo'}
+        tabIndex={-1}
+        ref={dialogRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button class="close-button" aria-label="Close" onClick={onClose}>&times;</button>
+        <img src={image.url} alt={image.metadata.beer || image.key} />
         <div class="image-metadata">
           <div class="metadata-body">
             <div class="metadata-section">
@@ -110,7 +127,9 @@ export const ImageModal = ({ image, loadingNext, onClose, onNext, onPrevious, sh
 
           <div class="metadata-footer">
             <p class="date">
-              {new Date(image.metadata.date).toLocaleString('en-GB')}
+              {/* the space-separated datetime is not parseable by Safari, so
+                  convert it to ISO 8601 before constructing the Date */}
+              {new Date(image.metadata.date.replace(' ', 'T')).toLocaleString('en-GB')}
               {image.metadata.venue !== "Untappd at Home" && (
                 <span> {locationParts.join(', ')}</span>
               )}

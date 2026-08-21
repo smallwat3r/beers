@@ -46,10 +46,21 @@ func newIPRateLimiter(r rate.Limit, burst int, ttl time.Duration) *ipRateLimiter
 	return l
 }
 
+// maxLimiterEntries caps the per-IP map so a flood of distinct client IPs
+// cannot grow memory unboundedly between TTL sweeps. Evicted entries simply
+// get a fresh bucket on their next request.
+const maxLimiterEntries = 10000
+
 func (l *ipRateLimiter) allow(ip string, now time.Time) bool {
 	l.mu.Lock()
 	entry, ok := l.limiters[ip]
 	if !ok {
+		if len(l.limiters) >= maxLimiterEntries {
+			for k := range l.limiters {
+				delete(l.limiters, k)
+				break
+			}
+		}
 		entry = &ipLimiterEntry{limiter: rate.NewLimiter(l.rate, l.burst)}
 		l.limiters[ip] = entry
 	}
@@ -74,18 +85,18 @@ func (l *ipRateLimiter) cleanupLoop() {
 	}
 }
 
-// clientIP extracts the originating IP, honoring X-Forwarded-For / X-Real-IP set
-// by a trusted upstream proxy (the app runs behind Cloudflare) and falling back
-// to the transport remote address.
+// clientIP extracts the originating IP. The app runs behind Cloudflare, where
+// the only trustworthy value is CF-Connecting-IP: X-Forwarded-For is appended
+// to (not replaced) by the proxy, so its first entry is client-controlled and
+// only the last entry, added by the nearest trusted hop, can be believed.
+// Falls back to the transport remote address when not proxied.
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			return strings.TrimSpace(xff[:i])
-		}
-		return strings.TrimSpace(xff)
+	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
+		return strings.TrimSpace(ip)
 	}
-	if xrip := r.Header.Get("X-Real-IP"); xrip != "" {
-		return strings.TrimSpace(xrip)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		return strings.TrimSpace(parts[len(parts)-1])
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
