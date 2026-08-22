@@ -21,3 +21,6 @@ jobs:
       run: cd frontend && npm ci
     - name: Typecheck and build
       run: cd frontend && npm run build
+      env:
+        # the real value is only needed to deploy, the build just has to have one
+        R2_PUBLIC_URL: https://example.com
