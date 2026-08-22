@@ -80,14 +80,14 @@ export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, s
           class="prev-button"
           aria-label="Previous image"
           onClick={(e) => { e.stopPropagation(); onPrevious(); }}
-        >&#10094;</button>
+        />
       )}
       {showNext && (
         <button
           class="next-button"
           aria-label="Next image"
           onClick={(e) => { e.stopPropagation(); onNext(); }}
-        ><span>&#10095;</span></button>
+        />
       )}
       <div
         class="modal-content"

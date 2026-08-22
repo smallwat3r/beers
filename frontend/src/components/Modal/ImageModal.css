@@ -23,50 +23,67 @@
   position: relative;
 }
 
-.close-button {
+/* one style for all three modal controls: a white mark with a black outline,
+   readable over a photo or a light panel without needing a backdrop */
+.close-button,
+.prev-button,
+.next-button {
   position: absolute;
-  top: 10px;
-  right: 15px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  font-size: 2rem;
-  color: var(--color-text-muted);
+  color: white;
   cursor: pointer;
   line-height: 1;
-  padding: 0;
-  z-index: 1020;
+  filter: drop-shadow(1px 0 0 black) drop-shadow(-1px 0 0 black)
+    drop-shadow(0 1px 0 black) drop-shadow(0 -1px 0 black);
 }
 
-.close-button:hover {
-  color: var(--color-text-dark);
+.close-button {
+  top: 8px;
+  right: 8px;
+  font-size: 1.8rem;
+  z-index: 1020;
 }
 
 .prev-button,
 .next-button {
-  position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background-color: transparent;
-  color: white;
-  border: none;
-  font-size: 2rem;
-  cursor: pointer;
-  padding: 10px;
   z-index: 1010;
-  transition: background-color 0.3s;
 }
 
-.prev-button:hover,
-.next-button:hover {
-  background-color: transparent;
+/* chevrons drawn from two borders rather than a glyph: angle-quote ornaments
+   carry uneven side bearings and sit off-centre in the button */
+.prev-button::before,
+.next-button::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-top: 3px solid currentColor;
+  border-right: 3px solid currentColor;
+}
+
+/* the rotated square's ink sits toward the point, so nudge it back */
+.prev-button::before {
+  transform: translateX(3px) rotate(-135deg);
+}
+
+.next-button::before {
+  transform: translateX(-3px) rotate(45deg);
 }
 
 .prev-button {
-  left: 20px;
+  left: 12px;
 }
 
 .next-button {
-  right: 20px;
+  right: 12px;
 }
 
 .modal-content img {
@@ -201,6 +218,7 @@
     background-color: var(--color-bg-off-white);
   }
 
+  /* keep the chevrons over the photo so they never overlay the metadata */
   .prev-button,
   .next-button {
     top: 25%;
@@ -231,18 +249,4 @@
   .metadata-footer {
     text-align: left;
   }
-}
-
-.next-button .loader {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #000;
-  border-radius: 50%;
-  width: 0.1rem;
-  height: 0.1rem;
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
