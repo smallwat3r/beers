@@ -24,6 +24,7 @@ export function App() {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [renderCount, setRenderCount] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sort, setSort] = useState<'' | 'desc' | 'asc'>('');
   const [view, setView] = useState<'grid' | 'list'>(
     () => (localStorage.getItem('beers-view') === 'list' ? 'list' : 'grid'),
   );
@@ -33,10 +34,14 @@ export function App() {
     localStorage.setItem('beers-view', v);
   };
 
-  const visible = useMemo(
-    () => images.filter((img) => matchesFilters(img, filters)),
-    [images, filters],
-  );
+  const visible = useMemo(() => {
+    const filtered = images.filter((img) => matchesFilters(img, filters));
+    if (!sort) return filtered;
+    const dir = sort === 'asc' ? 1 : -1;
+    // unrated check-ins sort as 0, so they land at the low-rating end
+    const rating = (img: ImageType) => parseFloat(img.metadata.rating) || 0;
+    return filtered.sort((a, b) => dir * (rating(a) - rating(b)));
+  }, [images, filters, sort]);
 
   // unique counts over the filtered set, so the line doubles as a result count
   const stats = useMemo(() => {
@@ -123,16 +128,16 @@ export function App() {
     <div class="app">
       <div class="top-bar">
         <div class="toolbar">
-          {!isLoading && visible.length > 0 ? (
-            <p class="stats">
-              {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
-              {stats.styles} styles · {stats.places} places · {stats.cities} cities ·{' '}
-              {stats.countries} countries
-            </p>
-          ) : (
-            <span />
-          )}
           <div class="toolbar-actions">
+            <button
+              class="filter-toggle"
+              onClick={() => {
+                setSort(sort === '' ? 'desc' : sort === 'desc' ? 'asc' : '');
+                setRenderCount(PAGE_SIZE);
+              }}
+            >
+              Sort{sort === 'desc' ? ': rating ▾' : sort === 'asc' ? ': rating ▴' : ''}
+            </button>
             <button
               class="filter-toggle"
               aria-expanded={filtersOpen}
@@ -166,6 +171,13 @@ export function App() {
           onClose={() => setFiltersOpen(false)}
           onChange={changeFilters}
         />
+        {!isLoading && visible.length > 0 && (
+          <p class="stats">
+            {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
+            {stats.styles} styles · {stats.places} places · {stats.cities} cities ·{' '}
+            {stats.countries} countries
+          </p>
+        )}
       </div>
       {view === 'grid' ? (
         <ImageGrid images={rendered} isLoading={isLoading} onImageClick={openModal} />
