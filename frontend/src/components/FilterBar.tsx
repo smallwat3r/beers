@@ -9,6 +9,7 @@ export type Filters = {
   style: string;
   country: string;
   city: string;
+  venue: string;
   dateFrom: string;
   dateTo: string;
   ratingMin: string;
@@ -22,6 +23,7 @@ export const emptyFilters: Filters = {
   style: '',
   country: '',
   city: '',
+  venue: '',
   dateFrom: '',
   dateTo: '',
   ratingMin: '',
@@ -58,6 +60,7 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
     (!f.style || img.metadata.style === f.style) &&
     (!f.country || countryOf(img) === f.country) &&
     (!f.city || img.metadata.city === f.city) &&
+    (!f.venue || img.metadata.venue === f.venue) &&
     (!f.dateFrom || (day !== '' && day >= f.dateFrom)) &&
     (!f.dateTo || (day !== '' && day <= f.dateTo)) &&
     (!f.ratingMin || rating >= parseFloat(f.ratingMin)) &&
@@ -111,6 +114,12 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     },
     { key: 'country', label: 'Country', options: uniqSorted(images.map(countryOf)) },
     { key: 'city', label: 'City', options: uniqSorted(images.map((i) => i.metadata.city)) },
+    {
+      key: 'venue',
+      label: 'Venue',
+      options: uniqSorted(images.map((i) => i.metadata.venue)),
+      wide: true,
+    },
   ];
 
   const setField = (key: keyof Filters, value: string) =>
