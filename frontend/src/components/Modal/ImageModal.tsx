@@ -107,7 +107,7 @@ export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, s
               <p class="beer-style">{image.metadata.style} - {image.metadata.abv}% ABV</p>
               <p class="rating-display">
                 <StarRating rating={image.metadata.rating} />
-                <span>({image.metadata.rating}/5)</span>
+                <span>({image.metadata.rating || '?'}/5)</span>
               </p>
             </div>
 

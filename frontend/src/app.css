@@ -86,6 +86,13 @@
   border-radius: 3px;
 }
 
+/* native select reusing the toolbar button look */
+.sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+}
+
 .filter-toggle:hover {
   border-color: var(--color-text-muted);
   color: inherit;

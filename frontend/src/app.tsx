@@ -18,13 +18,22 @@ import { Image as ImageType } from './types';
 // only paces DOM growth
 const PAGE_SIZE = 60;
 
+// unrated check-ins sort as 0, so they land at the low-rating end
+const byRating = (img: ImageType) => parseFloat(img.metadata.rating) || 0;
+
+// the manifest arrives newest first, so "" (no comparator) is that order
+const SORTS: Record<string, (a: ImageType, b: ImageType) => number> = {
+  'rating-desc': (a, b) => byRating(b) - byRating(a),
+  'rating-asc': (a, b) => byRating(a) - byRating(b),
+};
+
 export function App() {
   const { images, isLoading, error, retry } = useImages();
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [renderCount, setRenderCount] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [sort, setSort] = useState<'' | 'desc' | 'asc'>('');
+  const [sort, setSort] = useState('');
   const [view, setView] = useState<'grid' | 'list'>(
     () => (localStorage.getItem('beers-view') === 'list' ? 'list' : 'grid'),
   );
@@ -36,11 +45,8 @@ export function App() {
 
   const visible = useMemo(() => {
     const filtered = images.filter((img) => matchesFilters(img, filters));
-    if (!sort) return filtered;
-    const dir = sort === 'asc' ? 1 : -1;
-    // unrated check-ins sort as 0, so they land at the low-rating end
-    const rating = (img: ImageType) => parseFloat(img.metadata.rating) || 0;
-    return filtered.sort((a, b) => dir * (rating(a) - rating(b)));
+    const compare = SORTS[sort];
+    return compare ? filtered.sort(compare) : filtered;
   }, [images, filters, sort]);
 
   // unique counts over the filtered set, so the line doubles as a result count
@@ -129,15 +135,19 @@ export function App() {
       <div class="top-bar">
         <div class="toolbar">
           <div class="toolbar-actions">
-            <button
-              class="filter-toggle"
-              onClick={() => {
-                setSort(sort === '' ? 'desc' : sort === 'desc' ? 'asc' : '');
+            <select
+              class="filter-toggle sort-select"
+              aria-label="Sort"
+              value={sort}
+              onChange={(e) => {
+                setSort((e.target as HTMLSelectElement).value);
                 setRenderCount(PAGE_SIZE);
               }}
             >
-              Sort{sort === 'desc' ? ': rating ▾' : sort === 'asc' ? ': rating ▴' : ''}
-            </button>
+              <option value="">Sort: newest</option>
+              <option value="rating-desc">Rating: high to low</option>
+              <option value="rating-asc">Rating: low to high</option>
+            </select>
             <button
               class="filter-toggle"
               aria-expanded={filtersOpen}
