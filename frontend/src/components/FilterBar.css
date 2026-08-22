@@ -179,6 +179,17 @@
     flex: 1;
     min-width: 0;
   }
+
+  /* bottom-sheet grab handle: hints the panel closes with a swipe up */
+  .filter-bar.open .filter-controls::after {
+    content: '';
+    width: 100%;
+    height: 4px;
+    margin: 2px auto 0;
+    max-width: 40px;
+    border-radius: 2px;
+    background-color: var(--color-border);
+  }
 }
 
 @media (prefers-color-scheme: light) {
