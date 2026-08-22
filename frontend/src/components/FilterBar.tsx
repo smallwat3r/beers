@@ -240,7 +240,13 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
           />
         </span>
         {Object.values(filters).some(Boolean) && (
-          <button class="filter-clear" onClick={() => onChange(emptyFilters)}>
+          <button
+            class="filter-clear"
+            onClick={() => {
+              onChange(emptyFilters);
+              onClose();
+            }}
+          >
             Clear
           </button>
         )}
