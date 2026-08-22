@@ -21,10 +21,14 @@ const PAGE_SIZE = 60;
 // unrated check-ins sort as 0, so they land at the low-rating end
 const byRating = (img: ImageType) => parseFloat(img.metadata.rating) || 0;
 
-// the manifest arrives newest first, so "" (no comparator) is that order
+// unparseable dates sort as 0, so they land at the oldest end
+const byDate = (img: ImageType) => Date.parse(img.metadata.date) || 0;
+
+// the manifest arrives newest first, so "" (no comparator) is date descending
 const SORTS: Record<string, (a: ImageType, b: ImageType) => number> = {
   'rating-desc': (a, b) => byRating(b) - byRating(a),
   'rating-asc': (a, b) => byRating(a) - byRating(b),
+  'date-asc': (a, b) => byDate(a) - byDate(b),
 };
 
 export function App() {
@@ -135,6 +139,14 @@ export function App() {
       <div class="top-bar">
         <div class="toolbar">
           <div class="toolbar-actions">
+            <button
+              class="filter-toggle"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}{' '}
+              {filtersOpen ? '▴' : '▾'}
+            </button>
             <select
               class="filter-toggle sort-select"
               aria-label="Sort"
@@ -144,18 +156,11 @@ export function App() {
                 setRenderCount(PAGE_SIZE);
               }}
             >
-              <option value="">Sort: newest</option>
+              <option value="">Date: newest first</option>
+              <option value="date-asc">Date: oldest first</option>
               <option value="rating-desc">Rating: high to low</option>
               <option value="rating-asc">Rating: low to high</option>
             </select>
-            <button
-              class="filter-toggle"
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}{' '}
-              {filtersOpen ? '▴' : '▾'}
-            </button>
             <div class="view-toggle" role="group" aria-label="View">
               <button
                 class={view === 'grid' ? 'active' : ''}
