@@ -13,6 +13,8 @@ export type Filters = {
   dateTo: string;
   ratingMin: string;
   ratingMax: string;
+  abvMin: string;
+  abvMax: string;
 };
 
 export const emptyFilters: Filters = {
@@ -24,6 +26,8 @@ export const emptyFilters: Filters = {
   dateTo: '',
   ratingMin: '',
   ratingMax: '',
+  abvMin: '',
+  abvMax: '',
 };
 
 // "Untappd at Home" is a virtual venue pinned to the United States, so its
@@ -33,6 +37,10 @@ export const countryOf = (img: Image): string =>
 
 // checkin ratings are strings like "3.5" out of 5
 const RATING_STEPS = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
+
+// coarse ladder rather than every distinct strength in the data, which runs to
+// hundreds of decimals; anything above 15% is a rare barrel-aged outlier
+const ABV_STEPS = ['3', '4', '5', '6', '7', '8', '9', '10', '12', '15', '20'];
 
 // checkin dates are RFC 2822, which Date parses natively; returns "YYYY-MM-DD"
 // (UTC) so date range checks reduce to string comparison, or "" when unparseable
@@ -44,6 +52,7 @@ const dayOf = (img: Image): string => {
 export const matchesFilters = (img: Image, f: Filters): boolean => {
   const day = dayOf(img);
   const rating = parseFloat(img.metadata.rating);
+  const abv = parseFloat(img.metadata.abv);
   return (
     (!f.brewery || img.metadata.brewery === f.brewery) &&
     (!f.style || img.metadata.style === f.style) &&
@@ -52,7 +61,9 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
     (!f.dateFrom || (day !== '' && day >= f.dateFrom)) &&
     (!f.dateTo || (day !== '' && day <= f.dateTo)) &&
     (!f.ratingMin || rating >= parseFloat(f.ratingMin)) &&
-    (!f.ratingMax || rating <= parseFloat(f.ratingMax))
+    (!f.ratingMax || rating <= parseFloat(f.ratingMax)) &&
+    (!f.abvMin || abv >= parseFloat(f.abvMin)) &&
+    (!f.abvMax || abv <= parseFloat(f.abvMax))
   );
 };
 
@@ -65,6 +76,11 @@ const toOptions = (values: string[]): Option[] =>
   values.map((v) => ({ value: v, label: v }));
 
 const toValue = (v: string): Option | null => (v ? { value: v, label: v } : null);
+
+const toPercentOptions = (values: string[]): Option[] =>
+  values.map((v) => ({ value: v, label: `${v}%` }));
+
+const toPercentValue = (v: string): Option | null => (v ? { value: v, label: `${v}%` } : null);
 
 type FilterBarProps = {
   images: Image[];
@@ -166,7 +182,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
         </span>
         <span class="filter-range">
           <Select
-            className="filter-select rating"
+            className="filter-select compact"
             classNamePrefix="rs"
             placeholder="Min rating"
             aria-label="Minimum rating"
@@ -178,7 +194,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
           />
           <span aria-hidden="true">-</span>
           <Select
-            className="filter-select rating"
+            className="filter-select compact"
             classNamePrefix="rs"
             placeholder="Max rating"
             aria-label="Maximum rating"
@@ -187,6 +203,31 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             options={toOptions(RATING_STEPS)}
             value={toValue(filters.ratingMax)}
             onChange={(opt) => setField('ratingMax', opt?.value ?? '')}
+          />
+        </span>
+        <span class="filter-range">
+          <Select
+            className="filter-select compact"
+            classNamePrefix="rs"
+            placeholder="Min ABV"
+            aria-label="Minimum ABV"
+            isClearable
+            isSearchable={false}
+            options={toPercentOptions(ABV_STEPS)}
+            value={toPercentValue(filters.abvMin)}
+            onChange={(opt) => setField('abvMin', opt?.value ?? '')}
+          />
+          <span aria-hidden="true">-</span>
+          <Select
+            className="filter-select compact"
+            classNamePrefix="rs"
+            placeholder="Max ABV"
+            aria-label="Maximum ABV"
+            isClearable
+            isSearchable={false}
+            options={toPercentOptions(ABV_STEPS)}
+            value={toPercentValue(filters.abvMax)}
+            onChange={(opt) => setField('abvMax', opt?.value ?? '')}
           />
         </span>
         {Object.values(filters).some(Boolean) && (

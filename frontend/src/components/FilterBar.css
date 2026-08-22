@@ -26,7 +26,7 @@
   min-width: 16em;
 }
 
-.filter-select.rating {
+.filter-select.compact {
   min-width: 7.5em;
 }
 
@@ -168,7 +168,7 @@
   .filter-range {
     width: 100%;
   }
-  .filter-select.rating {
+  .filter-select.compact {
     flex: 1;
   }
   .filter-date {
