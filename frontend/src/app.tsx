@@ -1,7 +1,13 @@
 import { h, Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import './app.css';
-import { FilterBar, Filters, emptyFilters, matchesFilters } from './components/FilterBar';
+import {
+  FilterBar,
+  Filters,
+  countryOf,
+  emptyFilters,
+  matchesFilters,
+} from './components/FilterBar';
 import { ImageGrid } from './components/ImageGrid';
 import { ImageList } from './components/ImageList';
 import { ImageModal } from './components/Modal/ImageModal';
@@ -41,8 +47,9 @@ export function App() {
       beers: uniq((img) => img.metadata.beer),
       breweries: uniq((img) => img.metadata.brewery),
       styles: uniq((img) => img.metadata.style),
+      places: uniq((img) => img.metadata.venue),
       cities: uniq((img) => img.metadata.city),
-      countries: uniq((img) => img.metadata.country),
+      countries: uniq(countryOf),
     };
   }, [visible]);
   const rendered = visible.slice(0, renderCount);
@@ -119,7 +126,8 @@ export function App() {
           {!isLoading && visible.length > 0 ? (
             <p class="stats">
               {stats.checkins} check-ins · {stats.beers} beers · {stats.breweries} breweries ·{' '}
-              {stats.styles} styles · {stats.cities} cities · {stats.countries} countries
+              {stats.styles} styles · {stats.places} places · {stats.cities} cities ·{' '}
+              {stats.countries} countries
             </p>
           ) : (
             <span />

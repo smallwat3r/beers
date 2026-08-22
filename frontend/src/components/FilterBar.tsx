@@ -26,6 +26,11 @@ export const emptyFilters: Filters = {
   ratingMax: '',
 };
 
+// "Untappd at Home" is a virtual venue pinned to the United States, so its
+// country is meaningless for filtering
+export const countryOf = (img: Image): string =>
+  img.metadata.venue === 'Untappd at Home' ? '' : img.metadata.country;
+
 // checkin ratings are strings like "3.5" out of 5
 const RATING_STEPS = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 
@@ -42,7 +47,7 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
   return (
     (!f.brewery || img.metadata.brewery === f.brewery) &&
     (!f.style || img.metadata.style === f.style) &&
-    (!f.country || img.metadata.country === f.country) &&
+    (!f.country || countryOf(img) === f.country) &&
     (!f.city || img.metadata.city === f.city) &&
     (!f.dateFrom || (day !== '' && day >= f.dateFrom)) &&
     (!f.dateTo || (day !== '' && day <= f.dateTo)) &&
@@ -88,7 +93,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
       options: uniqSorted(images.map((i) => i.metadata.style)),
       wide: true,
     },
-    { key: 'country', label: 'Country', options: uniqSorted(images.map((i) => i.metadata.country)) },
+    { key: 'country', label: 'Country', options: uniqSorted(images.map(countryOf)) },
     { key: 'city', label: 'City', options: uniqSorted(images.map((i) => i.metadata.city)) },
   ];
 
