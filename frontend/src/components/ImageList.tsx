@@ -12,7 +12,7 @@ type ImageListProps = {
 export const ImageList = ({ images, isLoading, onImageClick }: ImageListProps) => {
   return (
     <div class="image-list">
-      {images.map((image) => {
+      {images.map((image, i) => {
         const md = image.metadata;
         const location = [md.venue, md.city, md.country].filter(Boolean).join(', ');
         return (
@@ -32,7 +32,7 @@ export const ImageList = ({ images, isLoading, onImageClick }: ImageListProps) =
             <img
               src={image.url}
               alt={md.beer || image.key}
-              loading="lazy"
+              loading={i < 12 ? 'eager' : 'lazy'}
               decoding="async"
             />
             <div class="list-info">

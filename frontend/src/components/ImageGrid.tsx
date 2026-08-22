@@ -11,8 +11,8 @@ type ImageGridProps = {
 export const ImageGrid = ({ images, isLoading, onImageClick }: ImageGridProps) => {
   return (
     <div class="image-grid">
-      {images.map((image) => (
-        <ImageCard key={image.url} image={image} onClick={onImageClick} />
+      {images.map((image, i) => (
+        <ImageCard key={image.url} image={image} onClick={onImageClick} eager={i < 8} />
       ))}
       {isLoading && (
         <div class="image-card loader">Loading...</div>

@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useRef } from 'preact/hooks';
+import { useMemo, useRef } from 'preact/hooks';
 import Select from 'react-select';
 import { Image } from '../types';
 import './FilterBar.css';
@@ -44,15 +44,9 @@ const RATING_STEPS = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 // hundreds of decimals; anything above 15% is a rare barrel-aged outlier
 const ABV_STEPS = ['3', '4', '5', '6', '7', '8', '9', '10', '12', '15', '20'];
 
-// checkin dates are RFC 2822, which Date parses natively; returns "YYYY-MM-DD"
-// (UTC) so date range checks reduce to string comparison, or "" when unparseable
-const dayOf = (img: Image): string => {
-  const t = new Date(img.metadata.date);
-  return Number.isNaN(t.getTime()) ? '' : t.toISOString().slice(0, 10);
-};
-
 export const matchesFilters = (img: Image, f: Filters): boolean => {
-  const day = dayOf(img);
+  // img.day is "YYYY-MM-DD" (UTC), so date range checks are string comparison
+  const day = img.day;
   const rating = parseFloat(img.metadata.rating);
   const abv = parseFloat(img.metadata.abv);
   return (
@@ -85,6 +79,10 @@ const toPercentOptions = (values: string[]): Option[] =>
 
 const toPercentValue = (v: string): Option | null => (v ? { value: v, label: `${v}%` } : null);
 
+// fixed ladders, built once rather than on every render
+const RATING_OPTIONS = toOptions(RATING_STEPS);
+const ABV_OPTIONS = toPercentOptions(ABV_STEPS);
+
 type FilterBarProps = {
   images: Image[];
   filters: Filters;
@@ -94,33 +92,24 @@ type FilterBarProps = {
 };
 
 export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBarProps) => {
-  const searchFields: {
+  // scanning every checkin five times is the most expensive thing this
+  // component does, and the answer only changes when the manifest does
+  const searchFields = useMemo<{
     key: keyof Filters;
     label: string;
-    options: string[];
+    options: Option[];
     wide?: boolean;
-  }[] = [
-    {
-      key: 'brewery',
-      label: 'Brewery',
-      options: uniqSorted(images.map((i) => i.metadata.brewery)),
-      wide: true,
-    },
-    {
-      key: 'style',
-      label: 'Style',
-      options: uniqSorted(images.map((i) => i.metadata.style)),
-      wide: true,
-    },
-    { key: 'country', label: 'Country', options: uniqSorted(images.map(countryOf)) },
-    { key: 'city', label: 'City', options: uniqSorted(images.map((i) => i.metadata.city)) },
-    {
-      key: 'venue',
-      label: 'Venue',
-      options: uniqSorted(images.map((i) => i.metadata.venue)),
-      wide: true,
-    },
-  ];
+  }[]>(() => {
+    const optionsOf = (get: (img: Image) => string) =>
+      toOptions(uniqSorted(images.map(get)));
+    return [
+      { key: 'brewery', label: 'Brewery', options: optionsOf((i) => i.metadata.brewery), wide: true },
+      { key: 'style', label: 'Style', options: optionsOf((i) => i.metadata.style), wide: true },
+      { key: 'country', label: 'Country', options: optionsOf(countryOf) },
+      { key: 'city', label: 'City', options: optionsOf((i) => i.metadata.city) },
+      { key: 'venue', label: 'Venue', options: optionsOf((i) => i.metadata.venue), wide: true },
+    ];
+  }, [images]);
 
   const setField = (key: keyof Filters, value: string) =>
     onChange({ ...filters, [key]: value });
@@ -162,7 +151,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             placeholder={label}
             aria-label={label}
             isClearable
-            options={toOptions(options)}
+            options={options}
             value={toValue(filters[key])}
             onChange={(opt) => setField(key, opt?.value ?? '')}
           />
@@ -197,7 +186,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             aria-label="Minimum rating"
             isClearable
             isSearchable={false}
-            options={toOptions(RATING_STEPS)}
+            options={RATING_OPTIONS}
             value={toValue(filters.ratingMin)}
             onChange={(opt) => setField('ratingMin', opt?.value ?? '')}
           />
@@ -209,7 +198,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             aria-label="Maximum rating"
             isClearable
             isSearchable={false}
-            options={toOptions(RATING_STEPS)}
+            options={RATING_OPTIONS}
             value={toValue(filters.ratingMax)}
             onChange={(opt) => setField('ratingMax', opt?.value ?? '')}
           />
@@ -222,7 +211,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             aria-label="Minimum ABV"
             isClearable
             isSearchable={false}
-            options={toPercentOptions(ABV_STEPS)}
+            options={ABV_OPTIONS}
             value={toPercentValue(filters.abvMin)}
             onChange={(opt) => setField('abvMin', opt?.value ?? '')}
           />
@@ -234,7 +223,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             aria-label="Maximum ABV"
             isClearable
             isSearchable={false}
-            options={toPercentOptions(ABV_STEPS)}
+            options={ABV_OPTIONS}
             value={toPercentValue(filters.abvMax)}
             onChange={(opt) => setField('abvMax', opt?.value ?? '')}
           />

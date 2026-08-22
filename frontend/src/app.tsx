@@ -21,8 +21,8 @@ const PAGE_SIZE = 60;
 // unrated check-ins sort as 0, so they land at the low-rating end
 const byRating = (img: ImageType) => parseFloat(img.metadata.rating) || 0;
 
-// unparseable dates sort as 0, so they land at the oldest end
-const byDate = (img: ImageType) => Date.parse(img.metadata.date) || 0;
+// unparseable dates carry time 0, so they land at the oldest end
+const byDate = (img: ImageType) => img.time;
 
 // the manifest arrives newest first, so "" (no comparator) is date descending
 const SORTS: Record<string, (a: ImageType, b: ImageType) => number> = {
