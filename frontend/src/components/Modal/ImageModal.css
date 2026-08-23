@@ -14,6 +14,8 @@
 
 .modal-content {
   background-color: var(--color-bg-light);
+  /* panel is always light, so don't inherit the dark-mode white text */
+  color: var(--color-text-dark);
   border-radius: 8px;
   overflow: hidden;
   max-width: 90vw;
