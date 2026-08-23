@@ -97,6 +97,13 @@
   color: var(--color-text-muted);
 }
 
+/* clear and close always sit together on their own row below the filters */
+.filter-actions {
+  flex-basis: 100%;
+  display: flex;
+  gap: 8px;
+}
+
 .filter-date {
   display: flex;
   align-items: center;

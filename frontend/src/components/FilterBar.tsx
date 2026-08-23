@@ -298,19 +298,23 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
           <span aria-hidden="true">-</span>
           {rangeSelect('abvMax', 'Max ABV', ABV_STEPS, '%')}
         </span>
-        {Object.values(filters).some(Boolean) && (
-          <button
-            class="filter-clear"
-            onClick={() => {
-              setTyped({});
-              setOpenKey(null);
-              onChange(emptyFilters);
-              onClose();
-            }}
-          >
-            Clear
+        <span class="filter-actions">
+          {Object.values(filters).some(Boolean) && (
+            <button
+              class="filter-clear"
+              onClick={() => {
+                setTyped({});
+                setOpenKey(null);
+                onChange(emptyFilters);
+              }}
+            >
+              Clear
+            </button>
+          )}
+          <button class="filter-close" onClick={onClose}>
+            Close
           </button>
-        )}
+        </span>
       </div>
     </div>
   );
