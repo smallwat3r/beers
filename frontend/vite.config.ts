@@ -23,16 +23,5 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: mode !== 'production',
     },
-    esbuild: {
-      jsxFactory: 'h',
-      jsxFragment: 'Fragment',
-      jsx: 'automatic',
-    },
-    resolve: {
-      alias: {
-        react: 'preact/compat',
-        'react-dom': 'preact/compat',
-      },
-    },
   }
 })

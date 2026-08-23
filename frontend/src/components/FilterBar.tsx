@@ -1,6 +1,4 @@
-import { h } from 'preact';
-import { useMemo, useRef } from 'preact/hooks';
-import Select from 'react-select';
+import { useMemo, useRef, useState } from 'preact/hooks';
 import { Image } from '../types';
 import './FilterBar.css';
 
@@ -44,9 +42,9 @@ const RATING_STEPS = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 // hundreds of decimals; anything above 15% is a rare barrel-aged outlier
 const ABV_STEPS = ['3', '4', '5', '6', '7', '8', '9', '10', '12', '15', '20'];
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export const matchesFilters = (img: Image, f: Filters): boolean => {
-  // img.day is "YYYY-MM-DD" (UTC), so date range checks are string comparison
-  const day = img.day;
   const rating = parseFloat(img.metadata.rating);
   const abv = parseFloat(img.metadata.abv);
   return (
@@ -55,8 +53,10 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
     (!f.country || countryOf(img) === f.country) &&
     (!f.city || img.metadata.city === f.city) &&
     (!f.venue || img.metadata.venue === f.venue) &&
-    (!f.dateFrom || (day !== '' && day >= f.dateFrom)) &&
-    (!f.dateTo || (day !== '' && day <= f.dateTo)) &&
+    // the bounds are "YYYY-MM-DD", which Date parses as UTC midnight, so the
+    // upper one covers the whole day it names
+    (!f.dateFrom || (img.time > 0 && img.time >= Date.parse(f.dateFrom))) &&
+    (!f.dateTo || (img.time > 0 && img.time < Date.parse(f.dateTo) + DAY_MS)) &&
     (!f.ratingMin || rating >= parseFloat(f.ratingMin)) &&
     (!f.ratingMax || rating <= parseFloat(f.ratingMax)) &&
     (!f.abvMin || abv >= parseFloat(f.abvMin)) &&
@@ -66,22 +66,6 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
 
 const uniqSorted = (values: string[]) =>
   [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-
-type Option = { value: string; label: string };
-
-const toOptions = (values: string[]): Option[] =>
-  values.map((v) => ({ value: v, label: v }));
-
-const toValue = (v: string): Option | null => (v ? { value: v, label: v } : null);
-
-const toPercentOptions = (values: string[]): Option[] =>
-  values.map((v) => ({ value: v, label: `${v}%` }));
-
-const toPercentValue = (v: string): Option | null => (v ? { value: v, label: `${v}%` } : null);
-
-// fixed ladders, built once rather than on every render
-const RATING_OPTIONS = toOptions(RATING_STEPS);
-const ABV_OPTIONS = toPercentOptions(ABV_STEPS);
 
 type FilterBarProps = {
   images: Image[];
@@ -97,22 +81,58 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
   const searchFields = useMemo<{
     key: keyof Filters;
     label: string;
-    options: Option[];
+    options: string[];
+    valid: Set<string>;
     wide?: boolean;
   }[]>(() => {
-    const optionsOf = (get: (img: Image) => string) =>
-      toOptions(uniqSorted(images.map(get)));
+    const optionsOf = (get: (img: Image) => string) => uniqSorted(images.map(get));
+    const field = (key: keyof Filters, label: string, get: (img: Image) => string,
+                   wide?: boolean) => {
+      const options = optionsOf(get);
+      return { key, label, options, valid: new Set(options), wide };
+    };
     return [
-      { key: 'brewery', label: 'Brewery', options: optionsOf((i) => i.metadata.brewery), wide: true },
-      { key: 'style', label: 'Style', options: optionsOf((i) => i.metadata.style), wide: true },
-      { key: 'country', label: 'Country', options: optionsOf(countryOf) },
-      { key: 'city', label: 'City', options: optionsOf((i) => i.metadata.city) },
-      { key: 'venue', label: 'Venue', options: optionsOf((i) => i.metadata.venue), wide: true },
+      field('brewery', 'Brewery', (i) => i.metadata.brewery, true),
+      field('style', 'Style', (i) => i.metadata.style, true),
+      field('country', 'Country', countryOf),
+      field('city', 'City', (i) => i.metadata.city),
+      field('venue', 'Venue', (i) => i.metadata.venue, true),
     ];
   }, [images]);
 
   const setField = (key: keyof Filters, value: string) =>
     onChange({ ...filters, [key]: value });
+
+  // what is in the search boxes, which is not the same as what is filtering:
+  // half-typed text filters nothing, only an exact option does. Keeping it here
+  // rather than reading it back off the input means a re-render mid-typing, one
+  // scroll step is enough, cannot wipe what the user is in the middle of typing
+  const [typed, setTyped] = useState<Partial<Record<keyof Filters, string>>>({});
+
+  const typeInto = (key: keyof Filters, value: string, valid: Set<string>) => {
+    setTyped((t) => ({ ...t, [key]: value }));
+    const next = valid.has(value) ? value : '';
+    if (next !== filters[key]) setField(key, next);
+  };
+
+  const rangeSelect = (
+    key: keyof Filters,
+    label: string,
+    steps: string[],
+    suffix = '',
+  ) => (
+    <select
+      class="filter-select compact"
+      aria-label={label}
+      value={filters[key]}
+      onChange={(e) => setField(key, (e.target as HTMLSelectElement).value)}
+    >
+      <option value="">{label}</option>
+      {steps.map((s) => (
+        <option key={s} value={s}>{s}{suffix}</option>
+      ))}
+    </select>
+  );
 
   // open the native calendar on click anywhere in the input, not just the
   // tiny picker icon; older browsers without showPicker just focus the field
@@ -127,14 +147,12 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     }
   };
 
-  // swipe up on the expanded mobile panel closes it; swipes inside an open
-  // dropdown menu are ignored so scrolling the option list stays usable
+  // swipe up on the expanded mobile panel closes it
   const touchStartY = useRef(0);
   const onTouchStart = (e: TouchEvent) => {
     touchStartY.current = e.changedTouches[0].screenY;
   };
   const onTouchEnd = (e: TouchEvent) => {
-    if ((e.target as Element).closest('.rs__menu')) return;
     if (touchStartY.current - e.changedTouches[0].screenY > 50) {
       onClose();
     }
@@ -143,18 +161,25 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
   return (
     <div class={`filter-bar ${open ? 'open' : ''}`}>
       <div class="filter-controls" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {searchFields.map(({ key, label, options, wide }) => (
-          <Select
+        {searchFields.map(({ key, label, valid, wide }) => (
+          <input
             key={key}
-            className={`filter-select${wide ? ' wide' : ''}`}
-            classNamePrefix="rs"
+            type="search"
+            class={`filter-select${wide ? ' wide' : ''}`}
+            list={`${key}-options`}
             placeholder={label}
             aria-label={label}
-            isClearable
-            options={options}
-            value={toValue(filters[key])}
-            onChange={(opt) => setField(key, opt?.value ?? '')}
+            autocomplete="off"
+            value={typed[key] ?? filters[key]}
+            onInput={(e) => typeInto(key, (e.target as HTMLInputElement).value, valid)}
           />
+        ))}
+        {/* the panel starts closed, so the option nodes, a couple of thousand
+            of them, are only built once the user asks for the filters */}
+        {open && searchFields.map(({ key, options }) => (
+          <datalist key={key} id={`${key}-options`}>
+            {options.map((o) => <option key={o} value={o} />)}
+          </datalist>
         ))}
         <span class="filter-range">
           {/* visible labels: iOS renders an empty date input as blank text,
@@ -179,59 +204,20 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
           </label>
         </span>
         <span class="filter-range">
-          <Select
-            className="filter-select compact"
-            classNamePrefix="rs"
-            placeholder="Min rating"
-            aria-label="Minimum rating"
-            isClearable
-            isSearchable={false}
-            options={RATING_OPTIONS}
-            value={toValue(filters.ratingMin)}
-            onChange={(opt) => setField('ratingMin', opt?.value ?? '')}
-          />
+          {rangeSelect('ratingMin', 'Min rating', RATING_STEPS)}
           <span aria-hidden="true">-</span>
-          <Select
-            className="filter-select compact"
-            classNamePrefix="rs"
-            placeholder="Max rating"
-            aria-label="Maximum rating"
-            isClearable
-            isSearchable={false}
-            options={RATING_OPTIONS}
-            value={toValue(filters.ratingMax)}
-            onChange={(opt) => setField('ratingMax', opt?.value ?? '')}
-          />
+          {rangeSelect('ratingMax', 'Max rating', RATING_STEPS)}
         </span>
         <span class="filter-range">
-          <Select
-            className="filter-select compact"
-            classNamePrefix="rs"
-            placeholder="Min ABV"
-            aria-label="Minimum ABV"
-            isClearable
-            isSearchable={false}
-            options={ABV_OPTIONS}
-            value={toPercentValue(filters.abvMin)}
-            onChange={(opt) => setField('abvMin', opt?.value ?? '')}
-          />
+          {rangeSelect('abvMin', 'Min ABV', ABV_STEPS, '%')}
           <span aria-hidden="true">-</span>
-          <Select
-            className="filter-select compact"
-            classNamePrefix="rs"
-            placeholder="Max ABV"
-            aria-label="Maximum ABV"
-            isClearable
-            isSearchable={false}
-            options={ABV_OPTIONS}
-            value={toPercentValue(filters.abvMax)}
-            onChange={(opt) => setField('abvMax', opt?.value ?? '')}
-          />
+          {rangeSelect('abvMax', 'Max ABV', ABV_STEPS, '%')}
         </span>
         {Object.values(filters).some(Boolean) && (
           <button
             class="filter-clear"
             onClick={() => {
+              setTyped({});
               onChange(emptyFilters);
               onClose();
             }}

@@ -1,4 +1,3 @@
-import { h, Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import './app.css';
 import {

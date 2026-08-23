@@ -11,7 +11,7 @@ The bucket's public base URL is read from the `.env` file at the root of the rep
 R2_PUBLIC_URL="your_r2_public_url"
 ```
 
-Then `make install`, and `make dev` for the dev server or `make build` to write `frontend/dist`.
+Then `make install`, and `make dev` for the dev server, or `make build` to write `frontend/dist` and `make preview` to serve it. The bucket CORS policy needs to allow `http://localhost:5173` and `http://localhost:4173` for either to load anything.
 
 ## Deploying to Cloudflare Pages
 
@@ -23,7 +23,7 @@ Connect the repository, then set:
 | Build command | `npm run build` |
 | Build output directory | `dist` |
 
-Set `R2_PUBLIC_URL` in the project environment variables, for production and preview.
+Set `R2_PUBLIC_URL` in the project environment variables, for production and preview. Node is pinned by `frontend/.node-version`.
 
 The bucket needs a CORS policy allowing the site's origins, otherwise the browser refuses to read `index.json`:
 ```json

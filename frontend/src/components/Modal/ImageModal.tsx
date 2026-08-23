@@ -1,4 +1,3 @@
-import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { Image as ImageType } from '../../types';
 import { StarRating } from '../StarRating/StarRating';

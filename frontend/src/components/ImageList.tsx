@@ -1,4 +1,3 @@
-import { h } from 'preact';
 import { Image as ImageType } from '../types';
 import { StarRating } from './StarRating/StarRating';
 import './ImageList.css';

@@ -1,4 +1,3 @@
-import { h, Fragment } from 'preact';
 import './StarRating.css';
 
 type StarRatingProps = {

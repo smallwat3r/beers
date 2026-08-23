@@ -18,10 +18,10 @@ export type CheckinMetadata = {
 export type Image = {
   url: string;
   key: string;
-  // derived once when the manifest loads, so sorting and date filtering never
-  // re-parse the RFC 2822 date string: epoch ms, and the UTC day as YYYY-MM-DD
+  // the checkin date as epoch ms, derived once when the manifest loads so that
+  // sorting and date filtering never re-parse the RFC 2822 string. 0 when the
+  // date is unparseable
   time: number;
-  day: string;
   metadata: CheckinMetadata;
 };
 

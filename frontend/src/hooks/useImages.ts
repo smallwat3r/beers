@@ -24,18 +24,13 @@ export const useImages = () => {
       }
       const records: ManifestRecord[] = await response.json();
       setImages(
-        records.map(({ key, ...metadata }) => {
-          const time = Date.parse(metadata.date);
-          const valid = !Number.isNaN(time);
-          return {
-            url: `${base}/${key}`,
-            key,
-            // unparseable dates sort as 0 and match no date range
-            time: valid ? time : 0,
-            day: valid ? new Date(time).toISOString().slice(0, 10) : '',
-            metadata,
-          };
-        }),
+        records.map(({ key, ...metadata }) => ({
+          url: `${base}/${key}`,
+          key,
+          // unparseable dates sort as 0 and match no date range
+          time: Date.parse(metadata.date) || 0,
+          metadata,
+        })),
       );
     } catch (e) {
       if (e instanceof Error) {
