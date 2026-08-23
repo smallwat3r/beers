@@ -16,19 +16,60 @@
   display: flex;
 }
 
+.filter-field {
+  position: relative;
+}
+
 .filter-select {
   font-size: 0.85em;
   min-width: 10em;
   box-sizing: border-box;
 }
 
+.filter-field .filter-select {
+  width: 100%;
+}
+
 /* brewery and style names run long, give their boxes more room */
-.filter-select.wide {
+.filter-field.wide {
   min-width: 16em;
 }
 
-.filter-select.compact {
-  min-width: 7.5em;
+.filter-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 110;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* the whole list is there, the box just stops growing and scrolls */
+  max-height: 14em;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 0.85em;
+  background-color: var(--color-button-bg-dark);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+}
+
+.filter-menu li {
+  padding: 0.4em 0.6em;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-menu li:hover,
+.filter-menu li.active {
+  background-color: var(--color-bg-dark);
+}
+
+/* the option currently filtering, called out without a second highlight */
+.filter-menu li[aria-selected='true'] {
+  font-weight: 500;
 }
 
 .filter-range {
@@ -117,12 +158,19 @@
     font-size: 1em;
   }
 
+  .filter-field,
   .filter-select,
   .filter-range {
     width: 100%;
   }
   .filter-select.compact {
     flex: 1;
+  }
+  /* the panel is a bottom sheet on small screens, so a long list would run off
+     the bottom; keep it inside the visible part */
+  .filter-menu {
+    max-height: 40vh;
+    font-size: 1em;
   }
   .filter-date {
     flex: 1;
@@ -142,5 +190,16 @@
     max-width: 40px;
     border-radius: 2px;
     background-color: var(--color-border);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .filter-menu {
+    background-color: var(--color-button-bg-light);
+  }
+
+  .filter-menu li:hover,
+  .filter-menu li.active {
+    background-color: var(--color-bg-grey);
   }
 }

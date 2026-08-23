@@ -115,6 +115,39 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     if (next !== filters[key]) setField(key, next);
   };
 
+  // which search box has its list open, and which row in it is highlighted
+  const [openKey, setOpenKey] = useState<keyof Filters | null>(null);
+  const [active, setActive] = useState(0);
+
+  const pick = (key: keyof Filters, value: string) => {
+    setTyped((t) => ({ ...t, [key]: value }));
+    setField(key, value);
+    setOpenKey(null);
+  };
+
+  // the list shows everything by default and narrows as the user types, on
+  // substring rather than prefix so "flint" finds "Two Flints". Only clicking a
+  // row, or typing one out in full, actually filters
+  const shown = (key: keyof Filters, options: string[]) => {
+    const q = (typed[key] ?? filters[key]).toLowerCase();
+    return q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+  };
+
+  const onSearchKey = (e: KeyboardEvent, key: keyof Filters, options: string[]) => {
+    const list = shown(key, options);
+    if (e.key === 'Escape') {
+      setOpenKey(null);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setOpenKey(key);
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setActive((i) => (list.length ? (i + step + list.length) % list.length : 0));
+    } else if (e.key === 'Enter' && openKey === key && list[active]) {
+      e.preventDefault();
+      pick(key, list[active]);
+    }
+  };
+
   const rangeSelect = (
     key: keyof Filters,
     label: string,
@@ -153,6 +186,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     touchStartY.current = e.changedTouches[0].screenY;
   };
   const onTouchEnd = (e: TouchEvent) => {
+    if ((e.target as Element).closest('.filter-menu')) return;
     if (touchStartY.current - e.changedTouches[0].screenY > 50) {
       onClose();
     }
@@ -161,25 +195,53 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
   return (
     <div class={`filter-bar ${open ? 'open' : ''}`}>
       <div class="filter-controls" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {searchFields.map(({ key, label, valid, wide }) => (
-          <input
-            key={key}
-            type="search"
-            class={`filter-select${wide ? ' wide' : ''}`}
-            list={`${key}-options`}
-            placeholder={label}
-            aria-label={label}
-            autocomplete="off"
-            value={typed[key] ?? filters[key]}
-            onInput={(e) => typeInto(key, (e.target as HTMLInputElement).value, valid)}
-          />
-        ))}
-        {/* the panel starts closed, so the option nodes, a couple of thousand
-            of them, are only built once the user asks for the filters */}
-        {open && searchFields.map(({ key, options }) => (
-          <datalist key={key} id={`${key}-options`}>
-            {options.map((o) => <option key={o} value={o} />)}
-          </datalist>
+        {searchFields.map(({ key, label, options, valid, wide }) => (
+          <div key={key} class={`filter-field${wide ? ' wide' : ''}`}>
+            <input
+              type="search"
+              class="filter-select"
+              role="combobox"
+              aria-expanded={openKey === key}
+              aria-controls={`${key}-menu`}
+              placeholder={label}
+              aria-label={label}
+              autocomplete="off"
+              value={typed[key] ?? filters[key]}
+              aria-autocomplete="list"
+              onFocus={() => { setOpenKey(key); setActive(0); }}
+              onClick={() => setOpenKey(key)}
+              onBlur={() => setOpenKey(null)}
+              onKeyDown={(e) => onSearchKey(e, key, options)}
+              onInput={(e) => {
+                setOpenKey(key);
+                setActive(0);
+                typeInto(key, (e.target as HTMLInputElement).value, valid);
+              }}
+            />
+            {openKey === key && (
+              /* every option is rendered, around 1100 for breweries, which is
+                 well inside what the browser handles in one frame. Windowing
+                 would only be worth it an order of magnitude further up */
+              <ul class="filter-menu" id={`${key}-menu`} role="listbox">
+                {shown(key, options).map((o, i) => (
+                  <li
+                    key={o}
+                    role="option"
+                    aria-selected={filters[key] === o}
+                    class={i === active ? 'active' : ''}
+                    ref={i === active
+                      ? (el) => el?.scrollIntoView({ block: 'nearest' })
+                      : undefined}
+                    /* mousedown, not click: the input's blur would otherwise
+                       close the list before the click landed */
+                    onMouseDown={(e) => { e.preventDefault(); pick(key, o); }}
+                  >
+                    {o}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ))}
         <span class="filter-range">
           {/* visible labels: iOS renders an empty date input as blank text,
@@ -218,6 +280,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
             class="filter-clear"
             onClick={() => {
               setTyped({});
+              setOpenKey(null);
               onChange(emptyFilters);
               onClose();
             }}
