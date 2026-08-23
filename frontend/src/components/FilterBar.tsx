@@ -37,6 +37,14 @@ export const emptyFilters: Filters = {
 export const countryOf = (img: Image): string =>
   img.metadata.venue === 'Untappd at Home' ? '' : img.metadata.country;
 
+// the beer option carries the brewery and style so same-named beers stay
+// distinct and typing either narrows the beer list; empty parts are dropped.
+// The list renders everything after the first separator as a second line
+const beerLabel = (img: Image): string =>
+  [img.metadata.beer, img.metadata.brewery, img.metadata.style]
+    .filter(Boolean)
+    .join(' · ');
+
 // checkin ratings are strings like "3.5" out of 5
 const RATING_STEPS = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 
@@ -50,7 +58,7 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
   const rating = parseFloat(img.metadata.rating);
   const abv = parseFloat(img.metadata.abv);
   return (
-    (!f.beer || img.metadata.beer === f.beer) &&
+    (!f.beer || beerLabel(img) === f.beer) &&
     (!f.brewery || img.metadata.brewery === f.brewery) &&
     (!f.style || img.metadata.style === f.style) &&
     (!f.country || countryOf(img) === f.country) &&
@@ -95,7 +103,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
       return { key, label, options, valid: new Set(options), wide };
     };
     return [
-      field('beer', 'Beer', (i) => i.metadata.beer, true),
+      field('beer', 'Beer', beerLabel, true),
       field('brewery', 'Brewery', (i) => i.metadata.brewery, true),
       field('style', 'Style', (i) => i.metadata.style, true),
       field('country', 'Country', countryOf),
@@ -227,22 +235,28 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
                  well inside what the browser handles in one frame. Windowing
                  would only be worth it an order of magnitude further up */
               <ul class="filter-menu" id={`${key}-menu`} role="listbox">
-                {shown(key, options).map((o, i) => (
-                  <li
-                    key={o}
-                    role="option"
-                    aria-selected={filters[key] === o}
-                    class={i === active ? 'active' : ''}
-                    ref={i === active
-                      ? (el) => el?.scrollIntoView({ block: 'nearest' })
-                      : undefined}
-                    /* mousedown, not click: the input's blur would otherwise
-                       close the list before the click landed */
-                    onMouseDown={(e) => { e.preventDefault(); pick(key, o); }}
-                  >
-                    {o}
-                  </li>
-                ))}
+                {shown(key, options).map((o, i) => {
+                  const [head, ...sub] = o.split(' · ');
+                  return (
+                    <li
+                      key={o}
+                      role="option"
+                      aria-selected={filters[key] === o}
+                      class={i === active ? 'active' : ''}
+                      ref={i === active
+                        ? (el) => el?.scrollIntoView({ block: 'nearest' })
+                        : undefined}
+                      /* mousedown, not click: the input's blur would otherwise
+                         close the list before the click landed */
+                      onMouseDown={(e) => { e.preventDefault(); pick(key, o); }}
+                    >
+                      {head}
+                      {sub.length > 0 && (
+                        <span class="option-sub">{sub.join(' · ')}</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

@@ -62,6 +62,14 @@
   text-overflow: ellipsis;
 }
 
+.filter-menu li .option-sub {
+  display: block;
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .filter-menu li:hover,
 .filter-menu li.active {
   background-color: var(--color-bg-dark);
