@@ -35,6 +35,11 @@
   min-width: 16em;
 }
 
+/* the beer search sits alone on the first row */
+.filter-field.full {
+  flex-basis: 100%;
+}
+
 .filter-menu {
   position: absolute;
   top: calc(100% + 2px);

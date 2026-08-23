@@ -208,7 +208,10 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     <div class={`filter-bar ${open ? 'open' : ''}`}>
       <div class="filter-controls" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {searchFields.map(({ key, label, options, valid, wide }) => (
-          <div key={key} class={`filter-field${wide ? ' wide' : ''}`}>
+          <div
+            key={key}
+            class={`filter-field${wide ? ' wide' : ''}${key === 'beer' ? ' full' : ''}`}
+          >
             <input
               type="search"
               class="filter-select"
