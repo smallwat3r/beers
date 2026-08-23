@@ -161,6 +161,31 @@
   border-color: var(--color-text-muted);
 }
 
+@media (min-width: 768px) {
+  /* rows fill the bar edge to edge: every field grows, and the oversized
+     filler at the end absorbs the slack on the last row, so a short final
+     row stays left-aligned at natural widths */
+  .filter-field,
+  .filter-range {
+    flex-grow: 1;
+  }
+
+  .filter-select.compact,
+  .filter-date {
+    flex: 1;
+  }
+
+  .filter-range input[type='date'] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filter-bar.open .filter-controls::after {
+    content: '';
+    flex-grow: 1000;
+  }
+}
+
 @media (max-width: 767px) {
   /* iOS Safari auto-zooms into focused inputs whose font size is below 16px,
      so every control stays at 1em (16px) on small screens */
