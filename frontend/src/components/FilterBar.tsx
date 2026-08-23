@@ -137,12 +137,15 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     setOpenKey(null);
   };
 
-  // the list shows everything by default and narrows as the user types, on
-  // substring rather than prefix so "flint" finds "Two Flints". Only clicking a
-  // row, or typing one out in full, actually filters
+  // the list narrows as the user types, on substring rather than prefix so
+  // "flint" finds "Two Flints". Only clicking a row, or typing one out in
+  // full, actually filters. Rendering is capped: diffing thousands of rows on
+  // every keystroke is what makes typing lag, and nobody scrolls past a few
+  // hundred anyway, they type instead
   const shown = (key: keyof Filters, options: string[]) => {
     const q = (typed[key] ?? filters[key]).toLowerCase();
-    return q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+    const hits = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+    return hits.slice(0, 200);
   };
 
   const onSearchKey = (e: KeyboardEvent, key: keyof Filters, options: string[]) => {
@@ -234,9 +237,8 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
               }}
             />
             {openKey === key && (
-              /* every option is rendered, around 1100 for breweries, which is
-                 well inside what the browser handles in one frame. Windowing
-                 would only be worth it an order of magnitude further up */
+              /* shown() caps the rows, so even the beer list stays well
+                 inside what the browser diffs and paints in one frame */
               <ul class="filter-menu" id={`${key}-menu`} role="listbox">
                 {shown(key, options).map((o, i) => {
                   const [head, ...sub] = o.split(' · ');

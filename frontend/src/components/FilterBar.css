@@ -65,6 +65,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* rows outside the scroll box are neither laid out nor painted, which is
+     what keeps typing smooth with thousands of beers; the estimate is a
+     two-line row so the scrollbar stays roughly honest */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.5em;
 }
 
 .filter-menu li .option-sub {
