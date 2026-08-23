@@ -3,6 +3,7 @@ import { Image } from '../types';
 import './FilterBar.css';
 
 export type Filters = {
+  beer: string;
   brewery: string;
   style: string;
   country: string;
@@ -17,6 +18,7 @@ export type Filters = {
 };
 
 export const emptyFilters: Filters = {
+  beer: '',
   brewery: '',
   style: '',
   country: '',
@@ -48,6 +50,7 @@ export const matchesFilters = (img: Image, f: Filters): boolean => {
   const rating = parseFloat(img.metadata.rating);
   const abv = parseFloat(img.metadata.abv);
   return (
+    (!f.beer || img.metadata.beer === f.beer) &&
     (!f.brewery || img.metadata.brewery === f.brewery) &&
     (!f.style || img.metadata.style === f.style) &&
     (!f.country || countryOf(img) === f.country) &&
@@ -92,6 +95,7 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
       return { key, label, options, valid: new Set(options), wide };
     };
     return [
+      field('beer', 'Beer', (i) => i.metadata.beer, true),
       field('brewery', 'Brewery', (i) => i.metadata.brewery, true),
       field('style', 'Style', (i) => i.metadata.style, true),
       field('country', 'Country', countryOf),
