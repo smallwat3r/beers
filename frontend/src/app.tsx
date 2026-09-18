@@ -58,7 +58,8 @@ export function App() {
       new Set(visible.map(get).filter(Boolean)).size;
     return {
       checkins: visible.length,
-      beers: uniq((img) => img.metadata.beer),
+      // same-named beers from different breweries are different beers
+      beers: uniq((img) => `${img.metadata.beer} · ${img.metadata.brewery}`),
       breweries: uniq((img) => img.metadata.brewery),
       styles: uniq((img) => img.metadata.style),
       places: uniq((img) => img.metadata.venue),
