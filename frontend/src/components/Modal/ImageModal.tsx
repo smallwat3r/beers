@@ -12,9 +12,12 @@ type ImageModalProps = {
   showNext: boolean;
 };
 
+// a native dialog opened with showModal: the browser traps focus, makes the
+// page behind inert, closes on Escape (surfaced as the close event) and stacks
+// it in the top layer, so none of that is done by hand here
 export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, showNext }: ImageModalProps) => {
   const touchStartX = useRef(0);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const locationParts = [
     image.metadata.venue,
@@ -28,8 +31,6 @@ export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, s
       onNext();
     } else if (e.key === 'ArrowLeft') {
       onPrevious();
-    } else if (e.key === 'Escape') {
-      onClose();
     }
   };
 
@@ -47,56 +48,29 @@ export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, s
   };
 
   useEffect(() => {
-    const scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      document.body.style.overflow = '';
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onNext, onPrevious, onClose]);
-
-  useEffect(() => {
-    dialogRef.current?.focus();
+    dialogRef.current?.showModal();
   }, []);
 
   return (
-    <div class="modal-overlay" onClick={onClose} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <dialog
+      class="modal-overlay"
+      ref={dialogRef}
+      aria-label={image.metadata.beer || 'Beer photo'}
+      onClose={onClose}
+      onKeyDown={handleKeyDown}
+      // the dialog itself is the backdrop area, so a click that lands on it
+      // rather than on a child is a click outside the panel
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {showPrevious && (
-        <button
-          class="prev-button"
-          aria-label="Previous image"
-          onClick={(e) => { e.stopPropagation(); onPrevious(); }}
-        />
+        <button class="prev-button" aria-label="Previous image" onClick={onPrevious} />
       )}
       {showNext && (
-        <button
-          class="next-button"
-          aria-label="Next image"
-          onClick={(e) => { e.stopPropagation(); onNext(); }}
-        />
+        <button class="next-button" aria-label="Next image" onClick={onNext} />
       )}
-      <div
-        class="modal-content"
-        role="dialog"
-        aria-modal="true"
-        aria-label={image.metadata.beer || 'Beer photo'}
-        tabIndex={-1}
-        ref={dialogRef}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div class="modal-content">
         <button class="close-button" aria-label="Close" onClick={onClose}>&times;</button>
         <img src={image.url} alt={image.metadata.beer || image.key} />
         <div class="image-metadata">
@@ -133,6 +107,6 @@ export const ImageModal = ({ image, onClose, onNext, onPrevious, showPrevious, s
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };

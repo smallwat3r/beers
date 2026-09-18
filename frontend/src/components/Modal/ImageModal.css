@@ -1,15 +1,26 @@
-.modal-overlay {
+/* the dialog fills the viewport and doubles as the backdrop: undo the UA's
+   centred box with border and padding, the top layer handles stacking */
+.modal-overlay[open] {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
   background-color: var(--color-modal-overlay);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
   overscroll-behavior: contain;
+}
+
+/* the page behind is inert, so stop it scrolling under the dialog too. iOS
+   may still let a touch scroll chain through, the old fixed-body hack if so */
+body:has(.modal-overlay[open]) {
+  overflow: hidden;
 }
 
 .modal-content {
@@ -50,14 +61,12 @@
   top: 8px;
   right: 8px;
   font-size: 1.8rem;
-  z-index: 1020;
 }
 
 .prev-button,
 .next-button {
   top: 50%;
   transform: translateY(-50%);
-  z-index: 1010;
 }
 
 /* chevrons drawn from two borders rather than a glyph: angle-quote ornaments
