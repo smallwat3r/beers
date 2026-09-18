@@ -12,22 +12,10 @@ type ImageCardProps = {
 
 export const ImageCard = ({ image, onClick, eager }: ImageCardProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const open = () => onClick(image);
 
   return (
-    <div
-      class="image-card"
-      role="button"
-      tabIndex={0}
-      onClick={open}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          open();
-        }
-      }}
-    >
-      <div class="image-container">
+    <button class="image-card" onClick={() => onClick(image)}>
+      <span class="image-container">
         <img
           src={image.url}
           alt={image.metadata.beer || image.key}
@@ -37,7 +25,7 @@ export const ImageCard = ({ image, onClick, eager }: ImageCardProps) => {
           onLoad={() => setIsLoaded(true)}
           onError={() => setIsLoaded(true)}
         />
-      </div>
-    </div>
+      </span>
+    </button>
   );
 };

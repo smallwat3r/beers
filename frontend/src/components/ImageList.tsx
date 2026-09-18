@@ -15,26 +15,14 @@ export const ImageList = ({ images, isLoading, onImageClick }: ImageListProps) =
         const md = image.metadata;
         const location = [md.venue, md.city, md.country].filter(Boolean).join(', ');
         return (
-          <div
-            key={image.url}
-            class="list-row"
-            role="button"
-            tabIndex={0}
-            onClick={() => onImageClick(image)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onImageClick(image);
-              }
-            }}
-          >
+          <button key={image.url} class="list-row" onClick={() => onImageClick(image)}>
             <img
               src={image.url}
               alt={md.beer || image.key}
               loading={i < 12 ? 'eager' : 'lazy'}
               decoding="async"
             />
-            <div class="list-info">
+            <span class="list-info">
               <span class="list-title">{md.beer}</span>
               <span class="list-sub">
                 {[md.brewery, md.style, md.abv && `${md.abv}%`].filter(Boolean).join(' · ')}
@@ -44,8 +32,8 @@ export const ImageList = ({ images, isLoading, onImageClick }: ImageListProps) =
                 <span>{new Date(md.date).toLocaleDateString('en-GB')}</span>
                 {location && <span class="list-location">{location}</span>}
               </span>
-            </div>
-          </div>
+            </span>
+          </button>
         );
       })}
       {isLoading && <div class="list-row loader">Loading...</div>}
