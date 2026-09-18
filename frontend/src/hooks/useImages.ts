@@ -33,9 +33,7 @@ export const useImages = () => {
         })),
       );
     } catch (e) {
-      if (e instanceof Error) {
-        setError(e);
-      }
+      setError(e instanceof Error ? e : new Error(String(e)));
     } finally {
       setIsLoading(false);
     }
