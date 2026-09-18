@@ -38,6 +38,10 @@ The bucket needs a CORS policy allowing the site's origins, otherwise the browse
 ]
 ```
 
-Origins are matched exactly, so use the deployment's real URL, and purge the Cloudflare cache after a change. `index.json` also wants a short `Cache-Control` on the bucket side, as it sets how quickly a new checkin shows up.
+Origins are matched exactly, so use the deployment's real URL, and purge the Cloudflare cache after a change.
+
+`index.json` decides how quickly a new checkin shows up, so give it `Cache-Control: no-cache` on the bucket side: R2 sends an ETag, and browsers then revalidate on every visit at the cost of a 304 rather than a re-download. A long `max-age` hides new checkins from returning visitors until it expires.
+
+The security headers in `frontend/public/_headers` name the bucket host in the CSP, so update them when the bucket moves.
 
 ![beers.png](./img/beers.png)
