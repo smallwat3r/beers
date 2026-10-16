@@ -169,18 +169,16 @@ export function App() {
               <option value="rating-desc">Rating: high to low</option>
               <option value="rating-asc">Rating: low to high</option>
             </select>
-            <div class="view-toggle" role="group" aria-label="View">
+            <select
+              class="filter-toggle sort-select"
+              aria-label="View"
+              value={view}
+              onChange={(e) => changeView((e.target as HTMLSelectElement).value as View)}
+            >
               {VIEWS.map((v) => (
-                <button
-                  key={v}
-                  class={view === v ? 'active' : ''}
-                  aria-pressed={view === v}
-                  onClick={() => changeView(v)}
-                >
-                  {v[0].toUpperCase() + v.slice(1)}
-                </button>
+                <option key={v} value={v}>{v[0].toUpperCase() + v.slice(1)}</option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
         <FilterBar

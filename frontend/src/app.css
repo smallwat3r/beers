@@ -98,32 +98,3 @@
   border-color: var(--color-text-muted);
   color: inherit;
 }
-
-.view-toggle {
-  display: flex;
-  gap: 0;
-}
-
-.view-toggle button {
-  font-size: 0.85em;
-  font-weight: 400;
-  padding: 0.3em 0.9em;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-muted);
-  border-radius: 0;
-}
-
-.view-toggle button:first-child {
-  border-radius: 3px 0 0 3px;
-}
-
-.view-toggle button:last-child {
-  border-radius: 0 3px 3px 0;
-  border-left: none;
-}
-
-.view-toggle button.active {
-  color: inherit;
-  background-color: rgba(128, 128, 128, 0.18);
-}
