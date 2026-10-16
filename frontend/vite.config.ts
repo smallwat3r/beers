@@ -20,8 +20,13 @@ export default defineConfig(({ mode }) => {
     // same .env stay out of the bundle.
     envPrefix: ['VITE_', 'R2_PUBLIC_URL'],
     plugins: [preact()],
+    // same origin as the dev server, so the bucket CORS policy only needs to
+    // allow one local port; dev and preview cannot run at the same time
+    preview: { port: 5173, strictPort: true },
     build: {
       sourcemap: mode !== 'production',
+      // maplibre is a 1 MB chunk by itself, loaded only when the map opens
+      chunkSizeWarningLimit: 1100,
     },
   }
 })

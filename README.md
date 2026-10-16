@@ -11,7 +11,7 @@ The bucket's public base URL is read from the `.env` file at the root of the rep
 R2_PUBLIC_URL="your_r2_public_url"
 ```
 
-Then `make install`, and `make dev` for the dev server, or `make build` to write `frontend/dist` and `make preview` to serve it. The bucket CORS policy needs to allow `http://localhost:5173` and `http://localhost:4173` for either to load anything.
+Then `make install`, and `make dev` for the dev server, or `make build` to write `frontend/dist` and `make preview` to serve it. Both serve on port 5173, so the bucket CORS policy needs to allow `http://localhost:5173` for either to load anything.
 
 ## Deploying to Cloudflare Pages
 

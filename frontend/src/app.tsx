@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import './app.css';
 import {
@@ -12,6 +13,12 @@ import { ImageList } from './components/ImageList';
 import { ImageModal } from './components/Modal/ImageModal';
 import { useImages } from './hooks/useImages';
 import { Image as ImageType } from './types';
+
+// maplibre is most of the bundle, so it only loads once the map is opened
+const MapView = lazy(() => import('./components/MapView'));
+
+type View = 'grid' | 'list' | 'map';
+const VIEWS: View[] = ['grid', 'list', 'map'];
 
 // how many cards each scroll step adds; all data is already in memory, this
 // only paces DOM growth
@@ -37,11 +44,12 @@ export function App() {
   const [renderCount, setRenderCount] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState('');
-  const [view, setView] = useState<'grid' | 'list'>(
-    () => (localStorage.getItem('beers-view') === 'list' ? 'list' : 'grid'),
-  );
+  const [view, setView] = useState<View>(() => {
+    const saved = localStorage.getItem('beers-view') as View | null;
+    return saved && VIEWS.includes(saved) ? saved : 'grid';
+  });
 
-  const changeView = (v: 'grid' | 'list') => {
+  const changeView = (v: View) => {
     setView(v);
     localStorage.setItem('beers-view', v);
   };
@@ -132,7 +140,7 @@ export function App() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasMore, renderCount]);
+  }, [hasMore, renderCount, view]);
 
   return (
     <div class="app">
@@ -162,20 +170,16 @@ export function App() {
               <option value="rating-asc">Rating: low to high</option>
             </select>
             <div class="view-toggle" role="group" aria-label="View">
-              <button
-                class={view === 'grid' ? 'active' : ''}
-                aria-pressed={view === 'grid'}
-                onClick={() => changeView('grid')}
-              >
-                Grid
-              </button>
-              <button
-                class={view === 'list' ? 'active' : ''}
-                aria-pressed={view === 'list'}
-                onClick={() => changeView('list')}
-              >
-                List
-              </button>
+              {VIEWS.map((v) => (
+                <button
+                  key={v}
+                  class={view === v ? 'active' : ''}
+                  aria-pressed={view === v}
+                  onClick={() => changeView(v)}
+                >
+                  {v[0].toUpperCase() + v.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -194,15 +198,23 @@ export function App() {
           </p>
         )}
       </div>
-      {view === 'grid' ? (
+      {view === 'grid' && (
         <ImageGrid images={rendered} isLoading={isLoading} onImageClick={openModal} />
-      ) : (
+      )}
+      {view === 'list' && (
         <ImageList images={rendered} isLoading={isLoading} onImageClick={openModal} />
+      )}
+      {view === 'map' && (
+        <Suspense fallback={<p class="loader">Loading map...</p>}>
+          <MapView images={visible} onImageClick={openModal} />
+        </Suspense>
       )}
       {visible.length === 0 && !isLoading && !error && (
         <p class="no-results">No matching beers.</p>
       )}
-      <div ref={sentinelRef} class="scroll-sentinel" aria-hidden="true" />
+      {/* the map renders every check-in itself; with no cards above it the
+          sentinel would sit in view and page the window out to the whole set */}
+      {view !== 'map' && <div ref={sentinelRef} class="scroll-sentinel" aria-hidden="true" />}
       {error && (
         <div class="error-banner" role="alert">
           <span>Could not load images.</span>
