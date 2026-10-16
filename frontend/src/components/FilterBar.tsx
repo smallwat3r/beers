@@ -207,96 +207,103 @@ export const FilterBar = ({ images, filters, open, onClose, onChange }: FilterBa
     }
   };
 
+  const searchField = ({ key, label, options, valid, wide }: typeof searchFields[number]) => (
+        <div
+          key={key}
+          class={`filter-field${wide ? ' wide' : ''}${key === 'beer' ? ' full' : ''}`}
+        >
+          <input
+            type="search"
+            class="filter-select"
+            role="combobox"
+            aria-expanded={openKey === key}
+            aria-controls={`${key}-menu`}
+            placeholder={label}
+            aria-label={label}
+            autocomplete="off"
+            value={typed[key] ?? filters[key]}
+            aria-autocomplete="list"
+            onFocus={() => { setOpenKey(key); setActive(0); }}
+            onClick={() => setOpenKey(key)}
+            onBlur={() => setOpenKey(null)}
+            onKeyDown={(e) => onSearchKey(e, key, options)}
+            onInput={(e) => {
+              setOpenKey(key);
+              setActive(0);
+              typeInto(key, (e.target as HTMLInputElement).value, valid);
+            }}
+          />
+          {openKey === key && (
+            /* shown() caps the rows, so even the beer list stays well
+               inside what the browser diffs and paints in one frame */
+            <ul class="filter-menu" id={`${key}-menu`} role="listbox">
+              {shown(key, options).map((o, i) => {
+                const [head, ...sub] = o.split(' · ');
+                return (
+                  <li
+                    key={o}
+                    role="option"
+                    aria-selected={filters[key] === o}
+                    class={i === active ? 'active' : ''}
+                    ref={i === active
+                      ? (el) => el?.scrollIntoView({ block: 'nearest' })
+                      : undefined}
+                    /* mousedown, not click: the input's blur would otherwise
+                       close the list before the click landed */
+                    onMouseDown={(e) => { e.preventDefault(); pick(key, o); }}
+                  >
+                    {head}
+                    {sub.length > 0 && (
+                      <span class="option-sub">{sub.join(' · ')}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+  );
+
   return (
     <div class={`filter-bar ${open ? 'open' : ''}`}>
       <div class="filter-controls" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {searchFields.map(({ key, label, options, valid, wide }) => (
-          <div
-            key={key}
-            class={`filter-field${wide ? ' wide' : ''}${key === 'beer' ? ' full' : ''}`}
-          >
-            <input
-              type="search"
-              class="filter-select"
-              role="combobox"
-              aria-expanded={openKey === key}
-              aria-controls={`${key}-menu`}
-              placeholder={label}
-              aria-label={label}
-              autocomplete="off"
-              value={typed[key] ?? filters[key]}
-              aria-autocomplete="list"
-              onFocus={() => { setOpenKey(key); setActive(0); }}
-              onClick={() => setOpenKey(key)}
-              onBlur={() => setOpenKey(null)}
-              onKeyDown={(e) => onSearchKey(e, key, options)}
-              onInput={(e) => {
-                setOpenKey(key);
-                setActive(0);
-                typeInto(key, (e.target as HTMLInputElement).value, valid);
-              }}
-            />
-            {openKey === key && (
-              /* shown() caps the rows, so even the beer list stays well
-                 inside what the browser diffs and paints in one frame */
-              <ul class="filter-menu" id={`${key}-menu`} role="listbox">
-                {shown(key, options).map((o, i) => {
-                  const [head, ...sub] = o.split(' · ');
-                  return (
-                    <li
-                      key={o}
-                      role="option"
-                      aria-selected={filters[key] === o}
-                      class={i === active ? 'active' : ''}
-                      ref={i === active
-                        ? (el) => el?.scrollIntoView({ block: 'nearest' })
-                        : undefined}
-                      /* mousedown, not click: the input's blur would otherwise
-                         close the list before the click landed */
-                      onMouseDown={(e) => { e.preventDefault(); pick(key, o); }}
-                    >
-                      {head}
-                      {sub.length > 0 && (
-                        <span class="option-sub">{sub.join(' · ')}</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        ))}
-        <span class="filter-range">
-          {/* visible labels: iOS renders an empty date input as blank text,
-              so without these the fields are invisible until focused */}
-          <label class="filter-date">
-            <span>From</span>
-            <input
-              type="date"
-              onClick={openPicker}
-              value={filters.dateFrom}
-              onChange={(e) => setField('dateFrom', (e.target as HTMLInputElement).value)}
-            />
-          </label>
-          <label class="filter-date">
-            <span>To</span>
-            <input
-              type="date"
-              onClick={openPicker}
-              value={filters.dateTo}
-              onChange={(e) => setField('dateTo', (e.target as HTMLInputElement).value)}
-            />
-          </label>
+        {searchFields.filter((f) => f.key !== 'venue').map(searchField)}
+        <span class="filter-row">
+          {searchFields.filter((f) => f.key === 'venue').map(searchField)}
+          <span class="filter-range">
+            {/* visible labels: iOS renders an empty date input as blank text,
+                so without these the fields are invisible until focused */}
+            <label class="filter-date">
+              <span>From</span>
+              <input
+                type="date"
+                onClick={openPicker}
+                value={filters.dateFrom}
+                onChange={(e) => setField('dateFrom', (e.target as HTMLInputElement).value)}
+              />
+            </label>
+            <label class="filter-date">
+              <span>To</span>
+              <input
+                type="date"
+                onClick={openPicker}
+                value={filters.dateTo}
+                onChange={(e) => setField('dateTo', (e.target as HTMLInputElement).value)}
+              />
+            </label>
+          </span>
         </span>
-        <span class="filter-range">
-          {rangeSelect('ratingMin', 'Min rating', RATING_STEPS)}
-          <span aria-hidden="true">-</span>
-          {rangeSelect('ratingMax', 'Max rating', RATING_STEPS)}
-        </span>
-        <span class="filter-range">
-          {rangeSelect('abvMin', 'Min ABV', ABV_STEPS, '%')}
-          <span aria-hidden="true">-</span>
-          {rangeSelect('abvMax', 'Max ABV', ABV_STEPS, '%')}
+        <span class="filter-row">
+          <span class="filter-range">
+            {rangeSelect('ratingMin', 'Min rating', RATING_STEPS)}
+            <span aria-hidden="true">-</span>
+            {rangeSelect('ratingMax', 'Max rating', RATING_STEPS)}
+          </span>
+          <span class="filter-range">
+            {rangeSelect('abvMin', 'Min ABV', ABV_STEPS, '%')}
+            <span aria-hidden="true">-</span>
+            {rangeSelect('abvMax', 'Max ABV', ABV_STEPS, '%')}
+          </span>
         </span>
         <span class="filter-actions">
           {Object.values(filters).some(Boolean) && (

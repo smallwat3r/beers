@@ -97,6 +97,15 @@
   color: var(--color-text-muted);
 }
 
+/* venue with the dates, then both ranges, each pair on a row of its own */
+.filter-row {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 /* clear and close always sit together on their own row below the filters */
 .filter-actions {
   flex-basis: 100%;
