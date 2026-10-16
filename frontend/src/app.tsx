@@ -55,7 +55,7 @@ export function App() {
   // unique counts over the filtered set, so the line doubles as a result count
   const stats = useMemo(() => {
     const uniq = (get: (img: ImageType) => string) =>
-      new Set(visible.map(get).filter(Boolean)).size;
+      new Set(visible.map((img) => get(img).trim().toLowerCase()).filter(Boolean)).size;
     return {
       checkins: visible.length,
       // same-named beers from different breweries are different beers
