@@ -176,9 +176,12 @@ export default function MapView({ images, onImageClick }: MapViewProps) {
       {selected && (
         <>
           <h2 class="map-place">
-            {[selected.venue, selected.city, selected.country].filter(Boolean).join(', ')}
-            <span class="map-place-count">
-              {selected.images.length} check-in{selected.images.length === 1 ? '' : 's'}
+            {selected.venue || 'Unknown venue'}
+            <span class="map-place-sub">
+              {[
+                [selected.city, selected.country].filter(Boolean).join(', '),
+                `${selected.images.length} check-in${selected.images.length === 1 ? '' : 's'}`,
+              ].filter(Boolean).join(' · ')}
             </span>
           </h2>
           <ImageList images={selected.images} isLoading={false} onImageClick={onImageClick} />
